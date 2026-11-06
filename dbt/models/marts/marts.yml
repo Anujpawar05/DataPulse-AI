@@ -1,0 +1,56 @@
+version: 2
+
+models:
+  - name: fct_sales
+    columns:
+      - name: sale_id
+        data_tests:
+          - not_null
+          - unique
+      - name: order_id
+        data_tests:
+          - not_null
+
+  - name: dim_customers
+    columns:
+      - name: customer_id
+        data_tests:
+          - not_null
+          - unique
+
+  - name: dim_products
+    columns:
+      - name: product_id
+        data_tests:
+          - not_null
+          - unique
+
+  - name: fct_payments
+    columns:
+      - name: payment_id
+        data_tests:
+          - not_null
+          - unique
+
+  - name: fct_inventory
+    columns:
+      - name: product_id
+        data_tests:
+          - not_null
+      - name: warehouse
+        data_tests:
+          - not_null
+
+  - name: fct_daily_sales
+    columns:
+      - name: sales_date
+        data_tests:
+          - not_null
+          - unique
+
+  - name: fct_category_sales
+    columns:
+      - name: product_category
+        data_tests:
+          - not_null
+          - unique

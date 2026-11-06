@@ -1,0 +1,11 @@
+product_id,warehouse,stock_quantity,reorder_level
+201,Nagpur,120,30
+202,Pune,45,20
+203,Mumbai,15,25
+204,Nagpur,80,30
+205,Pune,10,20
+206,Mumbai,200,50
+207,Nagpur,25,30
+208,Pune,90,25
+209,Mumbai,12,20
+210,Nagpur,150,40

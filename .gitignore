@@ -1,0 +1,51 @@
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+airflow/.env
+.venv/
+venv/
+credentials/
+secrets/
+*.pem
+*.key
+
+# Python generated files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# IDE
+.vscode/
+
+# Logs
+*.log
+airflow/logs/
+dbt/logs/
+
+# Local data files
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Airflow generated files
+airflow/plugins/__pycache__/
+
+# dbt generated files
+dbt/target/
+dbt/dbt_packages/
+
+# Google Cloud credentials
+application_default_credentials.json
+
+# Local application configuration
+airflow/config/airflow.cfg
+dbt/.user.yml
+dbt/profiles.yml
+
+# Power BI files may contain imported data
+*.pbix
+
+airflow/backups/

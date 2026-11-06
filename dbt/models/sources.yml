@@ -1,0 +1,18 @@
+version: 2
+
+sources:
+  - name: datapulse_raw
+    description: "Raw validated datasets loaded into the BigQuery warehouse."
+    database: winter-sensor-474220-u4
+    schema: datapulse_warehouse
+
+    tables:
+      - name: customers
+      - name: products
+      - name: orders
+      - name: payments
+      - name: sales
+      - name: inventory
+      - name: api_products
+      - name: api_users
+      - name: api_carts
