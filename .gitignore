@@ -49,3 +49,5 @@ dbt/profiles.yml
 *.pbix
 
 airflow/backups/
+# Local frontend backups
+ai_agent/frontend/*.bak
