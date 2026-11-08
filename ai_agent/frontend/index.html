@@ -257,8 +257,13 @@
               <h2>Business Performance & Mart Analytics</h2>
               <p>Key financial, product, and inventory indicators computed from curated dbt mart models.</p>
             </div>
-            <div class="badge-source-marts">
-              <span>◈</span> Source: dbt Marts (Curated Models)
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <div id="analyticsSyncPill" class="badge-source-marts">
+                <span>◈</span> Source: dbt Marts (Live BigQuery)
+              </div>
+              <button type="button" id="btnRefreshAnalytics" class="topbar-btn-refresh" title="Fetch fresh metrics from warehouse">
+                <span>↻</span> Refresh Metrics
+              </button>
             </div>
           </div>
 
@@ -269,20 +274,20 @@
                 <span>Total Net Revenue</span>
                 <span>YTD</span>
               </div>
-              <div class="kpi-value">₹47.58 Cr</div>
+              <div class="kpi-value" id="kpiRevenueValue">₹47.59 Cr</div>
               <div class="kpi-subline">
-                <span class="trend-indicator up">↑ +14.2%</span> vs previous cycle
+                <span class="trend-indicator up" id="kpiRevenueSub">Total Profit: ₹14.99 Cr (31.5% margin)</span>
               </div>
             </div>
 
             <div class="kpi-card">
               <div class="kpi-topline">
-                <span>Completed Orders</span>
+                <span>Total Orders</span>
                 <span>FCT_SALES</span>
               </div>
-              <div class="kpi-value">5,000</div>
+              <div class="kpi-value" id="kpiOrdersValue">5,000</div>
               <div class="kpi-subline">
-                <span class="trend-indicator up">↑ 100%</span> payment fulfillment
+                <span class="trend-indicator up" id="kpiOrdersSub">3,194 delivered (100% recorded)</span>
               </div>
             </div>
 
@@ -291,20 +296,20 @@
                 <span>Customer Base</span>
                 <span>DIM_CUSTOMERS</span>
               </div>
-              <div class="kpi-value">1,000</div>
+              <div class="kpi-value" id="kpiCustomersValue">991</div>
               <div class="kpi-subline">
-                <span>16 major metro regions</span>
+                <span id="kpiCustomersSub">Active customers across regions</span>
               </div>
             </div>
 
             <div class="kpi-card">
               <div class="kpi-topline">
-                <span>Inventory Safety</span>
-                <span>FCT_INVENTORY</span>
+                <span>Products & Inventory</span>
+                <span>DIM_PRODUCTS / FCT_INVENTORY</span>
               </div>
-              <div class="kpi-value">100 SKUs</div>
+              <div class="kpi-value" id="kpiInventoryValue">100 SKUs</div>
               <div class="kpi-subline">
-                <span class="trend-indicator down">12 alerts</span> below reorder level
+                <span class="trend-indicator down" id="kpiInventorySub">4 alerts below reorder level</span>
               </div>
             </div>
           </div>
@@ -323,7 +328,7 @@
                 </button>
               </div>
 
-              <div class="category-bars-list">
+              <div class="category-bars-list" id="analyticsCategoryList">
                 <div class="cat-bar-item">
                   <div class="cat-bar-labels">
                     <span class="cat-name">Electronics & Computing</span>
@@ -388,7 +393,7 @@
                     <th>Status</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody id="analyticsRestockTbody">
                   <tr>
                     <td>Wireless ANC Headphones</td>
                     <td>WH-North</td>

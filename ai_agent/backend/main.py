@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from ai_agent.backend.routes.ask import router as ask_router
+from ai_agent.backend.routes.analytics import router as analytics_router
 
 
 app = FastAPI(
@@ -43,3 +44,4 @@ def health_check():
 
 
 app.include_router(ask_router)
+app.include_router(analytics_router)

@@ -54,6 +54,20 @@
     btnSendQuery: $("btnSendQuery"),
     suggestionCards: $$(".suggestion-card"),
 
+    // Analytics View
+    kpiRevenueValue: $("kpiRevenueValue"),
+    kpiRevenueSub: $("kpiRevenueSub"),
+    kpiOrdersValue: $("kpiOrdersValue"),
+    kpiOrdersSub: $("kpiOrdersSub"),
+    kpiCustomersValue: $("kpiCustomersValue"),
+    kpiCustomersSub: $("kpiCustomersSub"),
+    kpiInventoryValue: $("kpiInventoryValue"),
+    kpiInventorySub: $("kpiInventorySub"),
+    analyticsSyncPill: $("analyticsSyncPill"),
+    btnRefreshAnalytics: $("btnRefreshAnalytics"),
+    analyticsCategoryList: $("analyticsCategoryList"),
+    analyticsRestockTbody: $("analyticsRestockTbody"),
+
     // History View
     historyListContainer: $("historyListContainer"),
     btnClearHistory: $("btnClearHistory"),
@@ -119,6 +133,11 @@
     if (dom.breadcrumbSection) dom.breadcrumbSection.textContent = meta.section;
     if (dom.breadcrumbPage) dom.breadcrumbPage.textContent = meta.page;
     if (dom.topbarPageTitle) dom.topbarPageTitle.textContent = meta.title;
+
+    // If switching to analytics, load fresh metrics
+    if (viewName === "analytics") {
+      loadDashboardAnalytics(false);
+    }
 
     // If switching to history, re-render
     if (viewName === "history") {
@@ -799,6 +818,136 @@
     });
   }
 
+
+  // ===========================================================================
+  // Live Business Analytics (BigQuery Marts)
+  // ===========================================================================
+
+  let analyticsLoading = false;
+
+  async function loadDashboardAnalytics(forceRefresh = false) {
+    if (analyticsLoading) return;
+    analyticsLoading = true;
+
+    if (dom.analyticsSyncPill) {
+      dom.analyticsSyncPill.innerHTML = `<span>⏳</span> Syncing BigQuery...`;
+    }
+
+    try {
+      const url = forceRefresh
+        ? `${API_BASE_URL}/analytics/dashboard?refresh=true`
+        : `${API_BASE_URL}/analytics/dashboard`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        headers: { "Accept": "application/json" },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Analytics API returned HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      renderAnalyticsDashboard(data);
+
+      if (forceRefresh) {
+        showToast("Fetched fresh metrics from BigQuery warehouse");
+      }
+    } catch (err) {
+      console.warn("Failed to fetch dashboard analytics:", err);
+      if (dom.analyticsSyncPill) {
+        dom.analyticsSyncPill.innerHTML = `<span>⚠</span> BigQuery Marts (Live Connection Error)`;
+      }
+      if (forceRefresh) {
+        showToast("Unable to refresh warehouse metrics", false);
+      }
+    } finally {
+      analyticsLoading = false;
+    }
+  }
+
+  function renderAnalyticsDashboard(data) {
+    if (!data || !data.summary) return;
+
+    const s = data.summary;
+
+    // 1. Update KPI Cards
+    if (dom.kpiRevenueValue) dom.kpiRevenueValue.textContent = s.total_net_revenue_formatted;
+    if (dom.kpiRevenueSub) {
+      dom.kpiRevenueSub.innerHTML = `<span class="trend-indicator up">Total Profit: ${s.total_profit_formatted}</span> (${s.profit_margin_percentage}% margin)`;
+    }
+
+    if (dom.kpiOrdersValue) dom.kpiOrdersValue.textContent = Number(s.total_orders).toLocaleString();
+    if (dom.kpiOrdersSub) {
+      dom.kpiOrdersSub.innerHTML = `<span class="trend-indicator up">${Number(s.delivered_orders).toLocaleString()} delivered</span> (100% recorded)`;
+    }
+
+    if (dom.kpiCustomersValue) dom.kpiCustomersValue.textContent = Number(s.total_customers).toLocaleString();
+    if (dom.kpiCustomersSub) {
+      dom.kpiCustomersSub.textContent = "Active ordering customers across regions";
+    }
+
+    if (dom.kpiInventoryValue) dom.kpiInventoryValue.textContent = `${s.total_products} SKUs`;
+    if (dom.kpiInventorySub) {
+      dom.kpiInventorySub.innerHTML = `<span class="trend-indicator down">${s.restock_alerts_count} alerts</span> below reorder level`;
+    }
+
+    // 2. Update Category Profitability Progress Bars
+    if (dom.analyticsCategoryList && Array.isArray(data.category_profitability) && data.category_profitability.length > 0) {
+      dom.analyticsCategoryList.innerHTML = "";
+      const maxRev = Math.max(...data.category_profitability.map((c) => Number(c.net_revenue) || 0));
+
+      data.category_profitability.forEach((cat) => {
+        const item = document.createElement("div");
+        item.className = "cat-bar-item";
+
+        const fillWidth = maxRev > 0 ? Math.max(15, Math.round((Number(cat.net_revenue) / maxRev) * 100)) : 50;
+
+        item.innerHTML = `
+          <div class="cat-bar-labels">
+            <span class="cat-name">${cat.product_category}</span>
+            <span class="cat-metrics">${cat.net_revenue_formatted} · ${cat.profit_margin_percentage}% margin</span>
+          </div>
+          <div class="cat-progress-track">
+            <div class="cat-progress-fill" style="width: ${fillWidth}%;"></div>
+          </div>
+        `;
+        dom.analyticsCategoryList.appendChild(item);
+      });
+    }
+
+    // 3. Update Restock Priority Queue Table
+    if (dom.analyticsRestockTbody && Array.isArray(data.restock_queue)) {
+      dom.analyticsRestockTbody.innerHTML = "";
+
+      if (data.restock_queue.length === 0) {
+        dom.analyticsRestockTbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 16px;">All inventory levels are currently above reorder thresholds.</td></tr>`;
+      } else {
+        data.restock_queue.forEach((item) => {
+          const tr = document.createElement("tr");
+          const isCritical = Number(item.stock_difference) <= -8;
+          const statusClass = isCritical ? "urgent" : "urgent";
+          const statusLabel = isCritical ? "Critical" : "Low";
+
+          tr.innerHTML = `
+            <td>${item.product_name}</td>
+            <td>${item.warehouse}</td>
+            <td class="num urgent">${item.stock_quantity}</td>
+            <td class="num">${item.reorder_level}</td>
+            <td><span class="${statusClass}">${statusLabel}</span></td>
+          `;
+          dom.analyticsRestockTbody.appendChild(tr);
+        });
+      }
+    }
+
+    // 4. Update Sync Pill
+    if (dom.analyticsSyncPill) {
+      const isCached = data.cache && data.cache.cached;
+      dom.analyticsSyncPill.innerHTML = `<span>◈</span> Source: dbt Marts (${isCached ? "Cached BigQuery" : "Live BigQuery"})`;
+    }
+  }
+
   // ===========================================================================
   // Reset Action ("New Analysis")
   // ===========================================================================
@@ -905,6 +1054,14 @@
       });
     });
 
+    // Refresh Analytics Button
+    if (dom.btnRefreshAnalytics) {
+      dom.btnRefreshAnalytics.addEventListener("click", (e) => {
+        e.preventDefault();
+        loadDashboardAnalytics(true);
+      });
+    }
+
     // "Ask AI" buttons on Analytics Page
     $$(".btn-ask-widget").forEach((btn) => {
       btn.addEventListener("click", (e) => {
@@ -962,6 +1119,9 @@
     if (dom.queryInput) {
       dom.queryInput.focus();
     }
+
+    // Preload dashboard analytics in background
+    loadDashboardAnalytics(false);
   }
 
   // Initialize once DOM is ready
