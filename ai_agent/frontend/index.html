@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#090b10">
+  <title>DataPulse AI — Enterprise Business Data Platform</title>
+
+  <!-- Google Fonts: Space Grotesk & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- =======================================================================
+         Left Sidebar
+         ======================================================================= -->
+    <aside class="sidebar" aria-label="Main Navigation">
+      <div class="sidebar-header">
+        <div class="brand-badge-row">
+          <div class="brand-wrapper">
+            <div class="brand-logo-gem" aria-hidden="true">D</div>
+            <div class="brand-text-block">
+              <div class="brand-title">DataPulse <span>AI</span></div>
+              <div class="brand-tagline">Data Platform</div>
+            </div>
+          </div>
+          <span class="version-pill">v1.0</span>
+        </div>
+      </div>
+
+      <div class="sidebar-action-wrap">
+        <button type="button" id="newAnalysisBtn" class="btn-new-analysis" aria-label="Start new analysis">
+          <span class="icon-plus" aria-hidden="true">＋</span>
+          <span>New Analysis</span>
+        </button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <div class="nav-section-title">INTELLIGENCE WORKSPACE</div>
+
+        <button type="button" class="nav-item-btn active" data-view="assistant" id="navAssistant">
+          <span class="nav-item-icon" aria-hidden="true">✳</span>
+          <span>AI Assistant</span>
+          <span class="nav-item-badge">Core</span>
+        </button>
+
+        <button type="button" class="nav-item-btn" data-view="analytics" id="navAnalytics">
+          <span class="nav-item-icon" aria-hidden="true">▥</span>
+          <span>Business Analytics</span>
+        </button>
+
+        <button type="button" class="nav-item-btn" data-view="warehouse" id="navWarehouse">
+          <span class="nav-item-icon" aria-hidden="true">⌘</span>
+          <span>Data Warehouse</span>
+        </button>
+
+        <div class="nav-section-title">MONITORING & LOGS</div>
+
+        <button type="button" class="nav-item-btn" data-view="history" id="navHistory">
+          <span class="nav-item-icon" aria-hidden="true">⏱</span>
+          <span>Query History</span>
+          <span class="nav-item-badge" id="historyCounterBadge">0</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="system-status-card">
+          <div class="status-header-line">
+            <span class="status-label">SYSTEM STATUS</span>
+            <div id="sidebarPulsePill" class="status-pulse-pill checking">
+              <span class="pulse-dot"></span>
+              <span id="sidebarStatusText">Checking...</span>
+            </div>
+          </div>
+
+          <div class="system-details-grid">
+            <div class="detail-row">
+              <span>FastAPI API</span>
+              <span id="apiHostPort">127.0.0.1:8001</span>
+            </div>
+            <div class="detail-row">
+              <span>Target Warehouse</span>
+              <span>BigQuery Marts</span>
+            </div>
+            <div class="detail-row">
+              <span>Access Mode</span>
+              <span>Read-Only</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- =======================================================================
+         Main Workspace
+         ======================================================================= -->
+    <main class="main-content">
+      <!-- Topbar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <div class="topbar-breadcrumb">
+            <span id="breadcrumbSection">INTELLIGENCE</span> / <span id="breadcrumbPage">AI ASSISTANT</span>
+          </div>
+          <h1 class="topbar-title" id="topbarPageTitle">AI Analytics Assistant</h1>
+        </div>
+
+        <div class="topbar-right">
+          <div id="topbarConnectionBadge" class="topbar-badge">
+            <span class="badge-indicator"></span>
+            <span id="topbarConnectionText">Connecting to API</span>
+          </div>
+
+          <button type="button" id="btnRefreshHealth" class="topbar-btn-refresh" title="Check connection status">
+            <span>↻</span> Check Health
+          </button>
+        </div>
+      </header>
+
+      <!-- =====================================================================
+           VIEW 1: AI Assistant
+           ===================================================================== -->
+      <section id="viewAssistant" class="view-panel active" aria-labelledby="topbarPageTitle">
+        <div class="assistant-layout">
+          <div class="chat-viewport" id="chatViewport">
+
+            <!-- Welcome Experience -->
+            <div class="welcome-experience" id="welcomeExperience">
+              <div class="welcome-hero-card">
+                <div class="hero-pill-badge">
+                  <span>✳</span> BigQuery Grounded Intelligence
+                </div>
+                <h2 class="welcome-title">
+                  Turn business questions into <span>verified SQL insights.</span>
+                </h2>
+                <p class="welcome-desc">
+                  DataPulse AI retrieves schema context from curated BigQuery marts, translates plain-English questions into secure read-only SQL, and validates execution safety before querying live data.
+                </p>
+
+                <div class="capabilities-strip">
+                  <div class="cap-badge"><span>✓</span> Read-Only Enforcement</div>
+                  <div class="cap-badge"><span>✓</span> AST Safety Validator</div>
+                  <div class="cap-badge"><span>✓</span> Multi-Provider LLM Fallback</div>
+                  <div class="cap-badge"><span>✓</span> Curated dbt Data Marts</div>
+                </div>
+              </div>
+
+              <!-- Suggested Questions Section -->
+              <div class="suggestions-section">
+                <div class="suggestions-header">
+                  <div class="suggestions-label">
+                    <span>EXPLORE YOUR DATA</span> <span>·</span> <span>RECOMMENDED QUERIES</span>
+                  </div>
+                </div>
+
+                <div class="suggestions-grid">
+                  <!-- Prompt 1 -->
+                  <button type="button" class="suggestion-card" data-question="Show the top 5 products by revenue.">
+                    <div class="suggestion-icon-wrap lime" aria-hidden="true">↗</div>
+                    <div class="suggestion-content">
+                      <div class="suggestion-title">Revenue Leaders</div>
+                      <div class="suggestion-query-text">Show the top 5 products by revenue.</div>
+                    </div>
+                    <span class="suggestion-arrow" aria-hidden="true">→</span>
+                  </button>
+
+                  <!-- Prompt 2 -->
+                  <button type="button" class="suggestion-card" data-question="Show monthly revenue for all available months.">
+                    <div class="suggestion-icon-wrap blue" aria-hidden="true">▥</div>
+                    <div class="suggestion-content">
+                      <div class="suggestion-title">Monthly Trends</div>
+                      <div class="suggestion-query-text">Show monthly revenue for all available months.</div>
+                    </div>
+                    <span class="suggestion-arrow" aria-hidden="true">→</span>
+                  </button>
+
+                  <!-- Prompt 3 -->
+                  <button type="button" class="suggestion-card" data-question="Which product categories generate the highest profit?">
+                    <div class="suggestion-icon-wrap purple" aria-hidden="true">◈</div>
+                    <div class="suggestion-content">
+                      <div class="suggestion-title">Category Margins</div>
+                      <div class="suggestion-query-text">Which product categories generate the highest profit?</div>
+                    </div>
+                    <span class="suggestion-arrow" aria-hidden="true">→</span>
+                  </button>
+
+                  <!-- Prompt 4 -->
+                  <button type="button" class="suggestion-card" data-question="Which products need restocking?">
+                    <div class="suggestion-icon-wrap amber" aria-hidden="true">!</div>
+                    <div class="suggestion-content">
+                      <div class="suggestion-title">Inventory Alerts</div>
+                      <div class="suggestion-query-text">Which products need restocking?</div>
+                    </div>
+                    <span class="suggestion-arrow" aria-hidden="true">→</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Conversation Stream -->
+            <div class="conversation-stream" id="conversationStream"></div>
+
+            <!-- Loading Indicator Container -->
+            <div id="loadingContainer" class="loading-card" style="display: none;" role="status" aria-live="polite">
+              <div class="loading-left">
+                <div class="loading-spinner" aria-hidden="true"></div>
+                <div class="loading-text" id="loadingStatusText">
+                  Analysing your question and querying the warehouse...
+                </div>
+              </div>
+              <button type="button" id="btnCancelQuery" class="btn-cancel-query">Cancel</button>
+            </div>
+
+          </div>
+
+          <!-- Composer Dock -->
+          <footer class="composer-dock">
+            <div class="composer-card" id="composerCard">
+              <div class="composer-input-row">
+                <textarea
+                  id="queryInput"
+                  class="query-textarea"
+                  placeholder="Ask anything about revenue, orders, customers, inventory, or product performance..."
+                  rows="1"
+                  maxlength="1000"
+                  aria-label="Natural language business question"
+                ></textarea>
+
+                <button type="button" id="btnSendQuery" class="btn-send-query" title="Submit query" aria-label="Send query">
+                  <span aria-hidden="true">↑</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="composer-footer-hints">
+              <span>
+                <span class="hint-pill">ENTER</span> to send &nbsp;·&nbsp;
+                <span class="hint-pill">SHIFT + ENTER</span> for new line
+              </span>
+              <span>Protected read-only connection &nbsp;·&nbsp; BigQuery `datapulse_marts`</span>
+            </div>
+          </footer>
+        </div>
+      </section>
+
+      <!-- =====================================================================
+           VIEW 2: Business Analytics Workspace
+           ===================================================================== -->
+      <section id="viewAnalytics" class="view-panel" aria-labelledby="topbarPageTitle">
+        <div class="analytics-scroll-container">
+          <div class="workspace-intro-row">
+            <div class="workspace-intro-text">
+              <h2>Business Performance & Mart Analytics</h2>
+              <p>Key financial, product, and inventory indicators computed from curated dbt mart models.</p>
+            </div>
+            <div class="badge-source-marts">
+              <span>◈</span> Source: dbt Marts (Curated Models)
+            </div>
+          </div>
+
+          <!-- Metrics KPI Grid -->
+          <div class="metrics-kpi-grid">
+            <div class="kpi-card highlight">
+              <div class="kpi-topline">
+                <span>Total Net Revenue</span>
+                <span>YTD</span>
+              </div>
+              <div class="kpi-value">₹47.58 Cr</div>
+              <div class="kpi-subline">
+                <span class="trend-indicator up">↑ +14.2%</span> vs previous cycle
+              </div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-topline">
+                <span>Completed Orders</span>
+                <span>FCT_SALES</span>
+              </div>
+              <div class="kpi-value">5,000</div>
+              <div class="kpi-subline">
+                <span class="trend-indicator up">↑ 100%</span> payment fulfillment
+              </div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-topline">
+                <span>Customer Base</span>
+                <span>DIM_CUSTOMERS</span>
+              </div>
+              <div class="kpi-value">1,000</div>
+              <div class="kpi-subline">
+                <span>16 major metro regions</span>
+              </div>
+            </div>
+
+            <div class="kpi-card">
+              <div class="kpi-topline">
+                <span>Inventory Safety</span>
+                <span>FCT_INVENTORY</span>
+              </div>
+              <div class="kpi-value">100 SKUs</div>
+              <div class="kpi-subline">
+                <span class="trend-indicator down">12 alerts</span> below reorder level
+              </div>
+            </div>
+          </div>
+
+          <!-- Dual Grid: Revenue & Category Breakdown -->
+          <div class="analytics-dual-grid">
+            <!-- Widget 1: Category Profitability -->
+            <div class="analytics-widget-card">
+              <div class="widget-card-header">
+                <div class="widget-title-block">
+                  <h3>Category Profitability</h3>
+                  <p>Model: fct_category_sales · Margin distribution</p>
+                </div>
+                <button type="button" class="btn-ask-widget" data-quick-question="Show total revenue, total profit, and profit margin for each product category, sorted by total profit descending.">
+                  <span>✳</span> Ask AI
+                </button>
+              </div>
+
+              <div class="category-bars-list">
+                <div class="cat-bar-item">
+                  <div class="cat-bar-labels">
+                    <span class="cat-name">Electronics & Computing</span>
+                    <span class="cat-metrics">₹14.8M · 38% margin</span>
+                  </div>
+                  <div class="cat-progress-track">
+                    <div class="cat-progress-fill" style="width: 88%;"></div>
+                  </div>
+                </div>
+
+                <div class="cat-bar-item">
+                  <div class="cat-bar-labels">
+                    <span class="cat-name">Home Appliances</span>
+                    <span class="cat-metrics">₹9.2M · 32% margin</span>
+                  </div>
+                  <div class="cat-progress-track">
+                    <div class="cat-progress-fill" style="width: 64%;"></div>
+                  </div>
+                </div>
+
+                <div class="cat-bar-item">
+                  <div class="cat-bar-labels">
+                    <span class="cat-name">Apparel & Footwear</span>
+                    <span class="cat-metrics">₹7.4M · 45% margin</span>
+                  </div>
+                  <div class="cat-progress-track">
+                    <div class="cat-progress-fill" style="width: 52%;"></div>
+                  </div>
+                </div>
+
+                <div class="cat-bar-item">
+                  <div class="cat-bar-labels">
+                    <span class="cat-name">Books & Stationary</span>
+                    <span class="cat-metrics">₹3.1M · 24% margin</span>
+                  </div>
+                  <div class="cat-progress-track">
+                    <div class="cat-progress-fill" style="width: 28%;"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Widget 2: Inventory Restock Monitor -->
+            <div class="analytics-widget-card">
+              <div class="widget-card-header">
+                <div class="widget-title-block">
+                  <h3>Restock Priority Queue</h3>
+                  <p>Model: fct_inventory · Critical stock vs reorder level</p>
+                </div>
+                <button type="button" class="btn-ask-widget" data-quick-question="Show all products that require restocking, including product name, category, warehouse, stock quantity, and reorder level. Sort by lowest stock quantity first.">
+                  <span>✳</span> Ask AI
+                </button>
+              </div>
+
+              <table class="mini-table">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Warehouse</th>
+                    <th class="num">Stock</th>
+                    <th class="num">Reorder</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Wireless ANC Headphones</td>
+                    <td>WH-North</td>
+                    <td class="num urgent">8</td>
+                    <td class="num">25</td>
+                    <td><span class="urgent">Critical</span></td>
+                  </tr>
+                  <tr>
+                    <td>Ergonomic Mech Keyboard</td>
+                    <td>WH-South</td>
+                    <td class="num urgent">12</td>
+                    <td class="num">30</td>
+                    <td><span class="urgent">Low</span></td>
+                  </tr>
+                  <tr>
+                    <td>Ultra HD 4K Monitor 27"</td>
+                    <td>WH-West</td>
+                    <td class="num urgent">15</td>
+                    <td class="num">35</td>
+                    <td><span class="urgent">Low</span></td>
+                  </tr>
+                  <tr>
+                    <td>USB-C Fast Charging Hub</td>
+                    <td>WH-Central</td>
+                    <td class="num">22</td>
+                    <td class="num">40</td>
+                    <td><span>Monitor</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =====================================================================
+           VIEW 3: Data Warehouse Workspace
+           ===================================================================== -->
+      <section id="viewWarehouse" class="view-panel" aria-labelledby="topbarPageTitle">
+        <div class="warehouse-scroll-container">
+          <!-- Overview Card -->
+          <div class="warehouse-overview-card">
+            <div class="overview-top-row">
+              <div class="widget-title-block">
+                <h2>Google BigQuery Enterprise Warehouse</h2>
+                <p>Governed, tested, and transformed analytical data pipeline for DataPulse AI.</p>
+              </div>
+              <div class="conn-badge">
+                <span>●</span> Connected & Verified
+              </div>
+            </div>
+
+            <div class="warehouse-specs-grid">
+              <div class="spec-box">
+                <span class="spec-label">GCP Project ID</span>
+                <span class="spec-value">winter-sensor-474220-u4</span>
+              </div>
+              <div class="spec-box">
+                <span class="spec-label">Target Dataset</span>
+                <span class="spec-value">datapulse_marts</span>
+              </div>
+              <div class="spec-box">
+                <span class="spec-label">Region Location</span>
+                <span class="spec-value">asia-south1 (Mumbai)</span>
+              </div>
+              <div class="spec-box">
+                <span class="spec-label">Query Safeguards</span>
+                <span class="spec-value">1 GB Max / 30s Cap</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Marts Catalog Section -->
+          <div>
+            <div class="workspace-intro-row" style="margin-bottom: 14px;">
+              <div class="workspace-intro-text">
+                <h3>Curated dbt Marts Catalog</h3>
+                <p>Approved analytical views accessible to the natural-language SQL engine.</p>
+              </div>
+            </div>
+
+            <div class="marts-catalog-grid">
+              <!-- Mart 1 -->
+              <div class="mart-card">
+                <div class="mart-header">
+                  <span class="mart-name">fct_sales</span>
+                  <span class="mart-type-tag fct">Fact</span>
+                </div>
+                <div class="mart-desc">Grain: line-item order transactions with revenue, cost, discount, and profit calculations.</div>
+                <div class="mart-columns-list">
+                  <span class="col-tag">sale_id</span>
+                  <span class="col-tag">order_id</span>
+                  <span class="col-tag">product_id</span>
+                  <span class="col-tag">quantity</span>
+                  <span class="col-tag">revenue</span>
+                  <span class="col-tag">profit</span>
+                </div>
+                <div class="mart-footer-meta">
+                  <span>5,000 records</span>
+                  <span>Daily Partitioned</span>
+                </div>
+              </div>
+
+              <!-- Mart 2 -->
+              <div class="mart-card">
+                <div class="mart-header">
+                  <span class="mart-name">fct_daily_sales</span>
+                  <span class="mart-type-tag fct">Fact</span>
+                </div>
+                <div class="mart-desc">Grain: daily business summaries tracking revenue, orders, and fulfillment rates chronologically.</div>
+                <div class="mart-columns-list">
+                  <span class="col-tag">sales_date</span>
+                  <span class="col-tag">total_orders</span>
+                  <span class="col-tag">gross_revenue</span>
+                  <span class="col-tag">net_revenue</span>
+                </div>
+                <div class="mart-footer-meta">
+                  <span>Aggregated</span>
+                  <span>Time-Series</span>
+                </div>
+              </div>
+
+              <!-- Mart 3 -->
+              <div class="mart-card">
+                <div class="mart-header">
+                  <span class="mart-name">fct_category_sales</span>
+                  <span class="mart-type-tag fct">Fact</span>
+                </div>
+                <div class="mart-desc">Grain: product category commercial breakdown comparing profit margins and volume.</div>
+                <div class="mart-columns-list">
+                  <span class="col-tag">category</span>
+                  <span class="col-tag">total_revenue</span>
+                  <span class="col-tag">total_profit</span>
+                  <span class="col-tag">profit_margin</span>
+                </div>
+                <div class="mart-footer-meta">
+                  <span>8 Categories</span>
+                  <span>Curated View</span>
+                </div>
+              </div>
+
+              <!-- Mart 4 -->
+              <div class="mart-card">
+                <div class="mart-header">
+                  <span class="mart-name">fct_inventory</span>
+                  <span class="mart-type-tag fct">Fact</span>
+                </div>
+                <div class="mart-desc">Warehouse inventory positions, active warehouse locations, and restock alert levels.</div>
+                <div class="mart-columns-list">
+                  <span class="col-tag">product_id</span>
+                  <span class="col-tag">warehouse</span>
+                  <span class="col-tag">stock_quantity</span>
+                  <span class="col-tag">reorder_level</span>
+                </div>
+                <div class="mart-footer-meta">
+                  <span>100 SKUs</span>
+                  <span>Safety Thresholds</span>
+                </div>
+              </div>
+
+              <!-- Mart 5 -->
+              <div class="mart-card">
+                <div class="mart-header">
+                  <span class="mart-name">dim_products</span>
+                  <span class="mart-type-tag dim">Dimension</span>
+                </div>
+                <div class="mart-desc">Master catalog dimension containing product metadata, categories, and unit economics.</div>
+                <div class="mart-columns-list">
+                  <span class="col-tag">product_id</span>
+                  <span class="col-tag">product_name</span>
+                  <span class="col-tag">category</span>
+                  <span class="col-tag">price</span>
+                  <span class="col-tag">cost</span>
+                </div>
+                <div class="mart-footer-meta">
+                  <span>100 Master SKUs</span>
+                  <span>Slowly Changing</span>
+                </div>
+              </div>
+
+              <!-- Mart 6 -->
+              <div class="mart-card">
+                <div class="mart-header">
+                  <span class="mart-name">dim_customers</span>
+                  <span class="mart-type-tag dim">Dimension</span>
+                </div>
+                <div class="mart-desc">Customer master dimension with geographic location and registration timelines (PII protected).</div>
+                <div class="mart-columns-list">
+                  <span class="col-tag">customer_id</span>
+                  <span class="col-tag">city</span>
+                  <span class="col-tag">registration_date</span>
+                </div>
+                <div class="mart-footer-meta">
+                  <span>1,000 Customers</span>
+                  <span>Whitelisted Fields</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =====================================================================
+           VIEW 4: Query History Workspace
+           ===================================================================== -->
+      <section id="viewHistory" class="view-panel" aria-labelledby="topbarPageTitle">
+        <div class="history-scroll-container">
+          <div class="history-toolbar">
+            <div class="workspace-intro-text">
+              <h2>Session Query History</h2>
+              <p>Auditable log of natural-language queries executed during this application session.</p>
+            </div>
+            <button type="button" id="btnClearHistory" class="btn-clear-history">
+              Clear History
+            </button>
+          </div>
+
+          <div class="history-list" id="historyListContainer">
+            <!-- Dynamic history items rendered by script.js -->
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastNotice" class="toast-notice" role="status" aria-live="polite">
+    <span id="toastIcon" aria-hidden="true">✓</span>
+    <span id="toastMessage">Action completed</span>
+  </div>
+
+  <script src="script.js" defer></script>
+</body>
+</html>
+
