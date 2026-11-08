@@ -15,8 +15,11 @@ client = TestClient(app)
 def reset_cache():
     """Reset the analytics in-memory cache before each test."""
     with analytics._cache_lock:
-        analytics._cached_data = None
-        analytics._cached_timestamp = 0.0
+        if hasattr(analytics, "_cache_store"):
+            analytics._cache_store.clear()
+        if hasattr(analytics, "_cached_data"):
+            analytics._cached_data = None
+            analytics._cached_timestamp = 0.0
 
 
 def test_format_inr():
@@ -119,7 +122,7 @@ def test_dashboard_analytics_success(monkeypatch):
 
     # Verify Cache meta
     assert data["cache"]["cached"] is False
-    assert call_counts["count"] == 5
+    assert call_counts["count"] == 8
 
 
 def test_dashboard_caching_and_manual_refresh(monkeypatch):
@@ -149,19 +152,19 @@ def test_dashboard_caching_and_manual_refresh(monkeypatch):
     res1 = client.get("/analytics/dashboard")
     assert res1.status_code == 200
     assert res1.json()["cache"]["cached"] is False
-    assert call_counts["count"] == 5
+    assert call_counts["count"] == 8
 
     # 2. Second call: hits cache without executing BigQuery queries
     res2 = client.get("/analytics/dashboard")
     assert res2.status_code == 200
     assert res2.json()["cache"]["cached"] is True
-    assert call_counts["count"] == 5  # No additional queries!
+    assert call_counts["count"] == 8  # No additional queries!
 
     # 3. Third call with ?refresh=true: bypasses cache and fetches fresh data
     res3 = client.get("/analytics/dashboard?refresh=true")
     assert res3.status_code == 200
     assert res3.json()["cache"]["cached"] is False
-    assert call_counts["count"] == 10  # 5 fresh queries executed!
+    assert call_counts["count"] == 16  # 8 fresh queries executed!
 
 
 def test_dashboard_handles_empty_dataset(monkeypatch):

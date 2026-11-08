@@ -20,6 +20,11 @@
     activeView: "assistant",
     queryHistory: [],
     toastTimer: null,
+    analyticsStartDate: null,
+    analyticsEndDate: null,
+    analyticsGranularity: "monthly",
+    analyticsActivePreset: "all",
+    analyticsData: null,
   };
 
   // Safe DOM Elements Helper
@@ -57,6 +62,7 @@
     // Analytics View
     kpiRevenueValue: $("kpiRevenueValue"),
     kpiRevenueSub: $("kpiRevenueSub"),
+    kpiRevenuePeriodLabel: $("kpiRevenuePeriodLabel"),
     kpiOrdersValue: $("kpiOrdersValue"),
     kpiOrdersSub: $("kpiOrdersSub"),
     kpiCustomersValue: $("kpiCustomersValue"),
@@ -65,7 +71,22 @@
     kpiInventorySub: $("kpiInventorySub"),
     analyticsSyncPill: $("analyticsSyncPill"),
     btnRefreshAnalytics: $("btnRefreshAnalytics"),
+    filterPresetBtns: $$(".filter-preset-btn"),
+    analyticsStartDate: $("analyticsStartDate"),
+    analyticsEndDate: $("analyticsEndDate"),
+    btnApplyDateFilter: $("btnApplyDateFilter"),
+    btnResetDateFilter: $("btnResetDateFilter"),
+    granularityBtns: $$(".granularity-btn"),
+    revenueTrendChartContainer: $("revenueTrendChartContainer"),
+    trendChartSubtitle: $("trendChartSubtitle"),
+    trendChartViewport: $("trendChartViewport"),
+    chartTooltip: $("chartTooltip"),
     analyticsCategoryList: $("analyticsCategoryList"),
+    analyticsTopProductsTbody: $("analyticsTopProductsTbody"),
+    invHealthScoreVal: $("invHealthScoreVal"),
+    invTotalSkusVal: $("invTotalSkusVal"),
+    invCriticalAlertsVal: $("invCriticalAlertsVal"),
+    warehouseCardsGrid: $("warehouseCardsGrid"),
     analyticsRestockTbody: $("analyticsRestockTbody"),
 
     // History View
@@ -825,6 +846,15 @@
 
   let analyticsLoading = false;
 
+  function formatInrShort(val) {
+    const num = Number(val) || 0;
+    const abs = Math.abs(num);
+    if (abs >= 10000000) return `₹${(num / 10000000).toFixed(1)} Cr`;
+    if (abs >= 100000) return `₹${(num / 100000).toFixed(1)} L`;
+    if (abs >= 1000) return `₹${(num / 1000).toFixed(0)} K`;
+    return `₹${num.toFixed(0)}`;
+  }
+
   async function loadDashboardAnalytics(forceRefresh = false) {
     if (analyticsLoading) return;
     analyticsLoading = true;
@@ -834,9 +864,14 @@
     }
 
     try {
-      const url = forceRefresh
-        ? `${API_BASE_URL}/analytics/dashboard?refresh=true`
-        : `${API_BASE_URL}/analytics/dashboard`;
+      const params = new URLSearchParams();
+      if (state.analyticsStartDate) params.append("start_date", state.analyticsStartDate);
+      if (state.analyticsEndDate) params.append("end_date", state.analyticsEndDate);
+      if (state.analyticsGranularity) params.append("granularity", state.analyticsGranularity);
+      if (forceRefresh) params.append("refresh", "true");
+
+      const qs = params.toString();
+      const url = `${API_BASE_URL}/analytics/dashboard${qs ? `?${qs}` : ""}`;
 
       const response = await fetch(url, {
         method: "GET",
@@ -844,10 +879,12 @@
       });
 
       if (!response.ok) {
-        throw new Error(`Analytics API returned HTTP ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Analytics API returned HTTP ${response.status}`);
       }
 
       const data = await response.json();
+      state.analyticsData = data;
       renderAnalyticsDashboard(data);
 
       if (forceRefresh) {
@@ -856,11 +893,9 @@
     } catch (err) {
       console.warn("Failed to fetch dashboard analytics:", err);
       if (dom.analyticsSyncPill) {
-        dom.analyticsSyncPill.innerHTML = `<span>⚠</span> BigQuery Marts (Live Connection Error)`;
+        dom.analyticsSyncPill.innerHTML = `<span>⚠</span> BigQuery Connection Error`;
       }
-      if (forceRefresh) {
-        showToast("Unable to refresh warehouse metrics", false);
-      }
+      showToast(`Analytics Error: ${err.message}`, false);
     } finally {
       analyticsLoading = false;
     }
@@ -876,13 +911,30 @@
     if (dom.kpiRevenueSub) {
       dom.kpiRevenueSub.innerHTML = `<span class="trend-indicator up">Total Profit: ${s.total_profit_formatted}</span> (${s.profit_margin_percentage}% margin)`;
     }
-
-    if (dom.kpiOrdersValue) dom.kpiOrdersValue.textContent = Number(s.total_orders).toLocaleString();
-    if (dom.kpiOrdersSub) {
-      dom.kpiOrdersSub.innerHTML = `<span class="trend-indicator up">${Number(s.delivered_orders).toLocaleString()} delivered</span> (100% recorded)`;
+    if (dom.kpiRevenuePeriodLabel) {
+      const presetLabels = {
+        all: "All Time",
+        fy2026: "FY 2026 YTD",
+        fy2025: "FY 2025",
+        last90: "Last 90 Days",
+        last30: "Last 30 Days",
+      };
+      if (state.analyticsActivePreset && presetLabels[state.analyticsActivePreset]) {
+        dom.kpiRevenuePeriodLabel.textContent = presetLabels[state.analyticsActivePreset];
+      } else if (state.analyticsStartDate || state.analyticsEndDate) {
+        dom.kpiRevenuePeriodLabel.textContent = `${state.analyticsStartDate || "Start"} → ${state.analyticsEndDate || "End"}`;
+      } else {
+        dom.kpiRevenuePeriodLabel.textContent = "All Time";
+      }
     }
 
-    if (dom.kpiCustomersValue) dom.kpiCustomersValue.textContent = Number(s.total_customers).toLocaleString();
+    if (dom.kpiOrdersValue) dom.kpiOrdersValue.textContent = Number(s.total_orders).toLocaleString("en-IN");
+    if (dom.kpiOrdersSub) {
+      const deliveredPercent = s.total_orders > 0 ? Math.round((s.delivered_orders / s.total_orders) * 100) : 100;
+      dom.kpiOrdersSub.innerHTML = `<span class="trend-indicator up">${Number(s.delivered_orders).toLocaleString("en-IN")} delivered</span> (${deliveredPercent}% recorded)`;
+    }
+
+    if (dom.kpiCustomersValue) dom.kpiCustomersValue.textContent = Number(s.total_customers).toLocaleString("en-IN");
     if (dom.kpiCustomersSub) {
       dom.kpiCustomersSub.textContent = "Active ordering customers across regions";
     }
@@ -892,59 +944,325 @@
       dom.kpiInventorySub.innerHTML = `<span class="trend-indicator down">${s.restock_alerts_count} alerts</span> below reorder level`;
     }
 
-    // 2. Update Category Profitability Progress Bars
-    if (dom.analyticsCategoryList && Array.isArray(data.category_profitability) && data.category_profitability.length > 0) {
-      dom.analyticsCategoryList.innerHTML = "";
-      const maxRev = Math.max(...data.category_profitability.map((c) => Number(c.net_revenue) || 0));
+    // 2. Render Revenue Trends SVG Chart
+    renderRevenueTrendChart(data.revenue_trends, data.date_filter?.granularity || state.analyticsGranularity);
 
-      data.category_profitability.forEach((cat) => {
-        const item = document.createElement("div");
-        item.className = "cat-bar-item";
+    // 3. Render Category Profitability Progress Bars
+    renderCategoryComparison(data.category_profitability);
 
-        const fillWidth = maxRev > 0 ? Math.max(15, Math.round((Number(cat.net_revenue) / maxRev) * 100)) : 50;
+    // 4. Render Top 10 Products Leaderboard Table
+    renderTopProductsLeaderboard(data.top_products);
 
-        item.innerHTML = `
-          <div class="cat-bar-labels">
-            <span class="cat-name">${cat.product_category}</span>
-            <span class="cat-metrics">${cat.net_revenue_formatted} · ${cat.profit_margin_percentage}% margin</span>
-          </div>
-          <div class="cat-progress-track">
-            <div class="cat-progress-fill" style="width: ${fillWidth}%;"></div>
-          </div>
+    // 5. Render Warehouse Inventory Risk Cards & Restock Priority Queue
+    renderWarehouseInventoryRisk(data.inventory_risk, data.restock_queue);
+
+    // 6. Update Sync Pill
+    if (dom.analyticsSyncPill) {
+      const isCached = data.cache && data.cache.cached;
+      dom.analyticsSyncPill.innerHTML = `<span>◈</span> Source: dbt Marts (${isCached ? "Cached BigQuery" : "Live BigQuery"})`;
+    }
+  }
+
+  function renderRevenueTrendChart(trends, granularity) {
+    if (!dom.revenueTrendChartContainer) return;
+
+    if (!Array.isArray(trends) || trends.length === 0) {
+      dom.revenueTrendChartContainer.innerHTML = `
+        <div style="color: var(--text-muted); font-size: 13px; text-align: center; padding: 40px;">
+          No revenue or sales telemetry recorded for the selected date range.
+        </div>
+      `;
+      return;
+    }
+
+    if (dom.trendChartSubtitle) {
+      const granLabel = granularity === "daily" ? "Daily" : "Monthly";
+      dom.trendChartSubtitle.textContent = `Model: fct_daily_sales · ${granLabel} aggregation (${trends.length} periods) · Chronological warehouse telemetry`;
+    }
+
+    const W = 960;
+    const H = 250;
+    const padLeft = 70;
+    const padRight = 30;
+    const padTop = 20;
+    const padBottom = 35;
+    const plotW = W - padLeft - padRight;
+    const plotH = H - padTop - padBottom;
+
+    const maxRev = Math.max(...trends.map((t) => Number(t.net_revenue) || 0), 1000);
+    const yMax = Math.ceil(maxRev * 1.15);
+
+    const getX = (i) => padLeft + (i / Math.max(trends.length - 1, 1)) * plotW;
+    const getY = (val) => padTop + plotH - ((Number(val) || 0) / yMax) * plotH;
+
+    // Y Gridlines (4 horizontal lines)
+    let gridLinesSvg = "";
+    const yTicks = 4;
+    for (let t = 0; t <= yTicks; t++) {
+      const tickVal = (yMax / yTicks) * t;
+      const yPos = getY(tickVal);
+      gridLinesSvg += `
+        <line x1="${padLeft}" y1="${yPos}" x2="${W - padRight}" y2="${yPos}" stroke="#1e2636" stroke-width="1" stroke-dasharray="3 3"/>
+        <text x="${padLeft - 10}" y="${yPos + 4}" fill="#64748b" font-size="10" font-family="JetBrains Mono, monospace" text-anchor="end">${formatInrShort(tickVal)}</text>
+      `;
+    }
+
+    // Build Paths
+    const revPoints = trends.map((d, i) => `${getX(i).toFixed(1)},${getY(d.net_revenue).toFixed(1)}`);
+    const profitPoints = trends.map((d, i) => `${getX(i).toFixed(1)},${getY(d.total_profit).toFixed(1)}`);
+
+    const areaD = `M ${getX(0).toFixed(1)},${(padTop + plotH).toFixed(1)} L ${revPoints.join(" L ")} L ${getX(trends.length - 1).toFixed(1)},${(padTop + plotH).toFixed(1)} Z`;
+    const revLineD = `M ${revPoints.join(" L ")}`;
+    const profitLineD = `M ${profitPoints.join(" L ")}`;
+
+    // X Axis Labels (sample spaced intervals)
+    let xLabelsSvg = "";
+    const labelStep = Math.max(1, Math.ceil(trends.length / 8));
+    trends.forEach((d, i) => {
+      if (i % labelStep === 0 || i === trends.length - 1) {
+        const xPos = getX(i);
+        xLabelsSvg += `
+          <text x="${xPos}" y="${H - 12}" fill="#94a3b8" font-size="10" font-family="JetBrains Mono, monospace" text-anchor="middle">${d.period_label}</text>
         `;
-        dom.analyticsCategoryList.appendChild(item);
+      }
+    });
+
+    // Data Circles for Revenue
+    let circlesSvg = "";
+    if (trends.length <= 40) {
+      trends.forEach((d, i) => {
+        circlesSvg += `
+          <circle cx="${getX(i).toFixed(1)}" cy="${getY(d.net_revenue).toFixed(1)}" r="3" fill="#090b10" stroke="#bef264" stroke-width="2"/>
+        `;
       });
     }
 
-    // 3. Update Restock Priority Queue Table
-    if (dom.analyticsRestockTbody && Array.isArray(data.restock_queue)) {
+    const svgContent = `
+      <svg class="trend-chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="revAreaGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#bef264" stop-opacity="0.32" />
+            <stop offset="100%" stop-color="#bef264" stop-opacity="0.0" />
+          </linearGradient>
+        </defs>
+
+        <!-- Y Grid & Labels -->
+        ${gridLinesSvg}
+
+        <!-- Area Fill -->
+        <path d="${areaD}" fill="url(#revAreaGradient)"/>
+
+        <!-- Profit Line (Blue Dashed) -->
+        <path d="${profitLineD}" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-dasharray="4 3" stroke-linecap="round" stroke-linejoin="round"/>
+
+        <!-- Net Revenue Line (Lime Solid) -->
+        <path d="${revLineD}" fill="none" stroke="#bef264" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+
+        <!-- Data Circles -->
+        ${circlesSvg}
+
+        <!-- Guide Line (Interactive) -->
+        <line id="trendChartGuideLine" x1="0" y1="${padTop}" x2="0" y2="${padTop + plotH}" stroke="rgba(255,255,255,0.25)" stroke-width="1" stroke-dasharray="2 2" style="display: none;"/>
+
+        <!-- X Axis Labels -->
+        ${xLabelsSvg}
+      </svg>
+    `;
+
+    dom.revenueTrendChartContainer.innerHTML = svgContent;
+
+    // Attach Hover Tooltip Interactions
+    const svgEl = dom.revenueTrendChartContainer.querySelector("svg");
+    const guideLine = dom.revenueTrendChartContainer.querySelector("#trendChartGuideLine");
+    const tooltip = dom.chartTooltip;
+
+    if (!svgEl || !tooltip || !guideLine) return;
+
+    svgEl.addEventListener("mousemove", (e) => {
+      const rect = svgEl.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const svgScaleX = W / rect.width;
+      const svgX = mouseX * svgScaleX;
+
+      let closestIdx = 0;
+      let minDiff = Infinity;
+      trends.forEach((_, i) => {
+        const diff = Math.abs(getX(i) - svgX);
+        if (diff < minDiff) {
+          minDiff = diff;
+          closestIdx = i;
+        }
+      });
+
+      const item = trends[closestIdx];
+      const targetSvgX = getX(closestIdx);
+      const targetSvgY = getY(item.net_revenue);
+
+      // Position guideline
+      guideLine.setAttribute("x1", targetSvgX);
+      guideLine.setAttribute("x2", targetSvgX);
+      guideLine.style.display = "block";
+
+      // Position and populate tooltip
+      const screenX = (targetSvgX / W) * rect.width;
+      const screenY = (targetSvgY / H) * rect.height;
+
+      tooltip.innerHTML = `
+        <div class="tt-title">${item.period_label}</div>
+        <div class="tt-row"><span class="label">Net Revenue:</span><span class="val revenue">${item.net_revenue_formatted}</span></div>
+        <div class="tt-row"><span class="label">Total Profit:</span><span class="val profit">${item.total_profit_formatted}</span></div>
+        <div class="tt-row"><span class="label">Margin:</span><span class="val">${item.profit_margin_percentage}%</span></div>
+        <div class="tt-row"><span class="label">Orders / Units:</span><span class="val">${Number(item.total_orders).toLocaleString("en-IN")} / ${Number(item.units_sold).toLocaleString("en-IN")}</span></div>
+      `;
+
+      tooltip.style.left = `${screenX + 12}px`;
+      tooltip.style.top = `${screenY + 16}px`;
+      tooltip.style.display = "block";
+    });
+
+    svgEl.addEventListener("mouseleave", () => {
+      guideLine.style.display = "none";
+      tooltip.style.display = "none";
+    });
+  }
+
+  function renderCategoryComparison(categories) {
+    if (!dom.analyticsCategoryList) return;
+    dom.analyticsCategoryList.innerHTML = "";
+
+    if (!Array.isArray(categories) || categories.length === 0) {
+      dom.analyticsCategoryList.innerHTML = `<div style="color: var(--text-muted); font-size: 12px; padding: 12px;">No category sales data for this period.</div>`;
+      return;
+    }
+
+    const maxRev = Math.max(...categories.map((c) => Number(c.net_revenue) || 0), 1);
+
+    categories.forEach((cat) => {
+      const item = document.createElement("div");
+      item.className = "cat-bar-item";
+
+      const fillWidth = Math.max(10, Math.round((Number(cat.net_revenue) / maxRev) * 100));
+      const orderCountText = cat.total_orders > 0 ? ` · ${Number(cat.total_orders).toLocaleString("en-IN")} orders` : "";
+
+      item.innerHTML = `
+        <div class="cat-bar-labels">
+          <span class="cat-name">${cat.product_category}</span>
+          <span class="cat-metrics">${cat.net_revenue_formatted} · ${cat.profit_margin_percentage}% margin${orderCountText}</span>
+        </div>
+        <div class="cat-progress-track">
+          <div class="cat-progress-fill" style="width: ${fillWidth}%;"></div>
+        </div>
+      `;
+      dom.analyticsCategoryList.appendChild(item);
+    });
+  }
+
+  function renderTopProductsLeaderboard(topProducts) {
+    if (!dom.analyticsTopProductsTbody) return;
+    dom.analyticsTopProductsTbody.innerHTML = "";
+
+    if (!Array.isArray(topProducts) || topProducts.length === 0) {
+      dom.analyticsTopProductsTbody.innerHTML = `
+        <tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 20px;">No product records found for this period.</td></tr>
+      `;
+      return;
+    }
+
+    topProducts.forEach((p, idx) => {
+      const tr = document.createElement("tr");
+      const rankNum = idx + 1;
+
+      tr.innerHTML = `
+        <td class="rank"><span class="rank-badge">${rankNum}</span></td>
+        <td>
+          <div class="prod-meta-name">
+            <span class="prod-title">${p.product_name}</span>
+            <span class="prod-category">${p.product_category}</span>
+          </div>
+        </td>
+        <td class="num">${Number(p.units_sold).toLocaleString("en-IN")}</td>
+        <td class="num" style="color: var(--text-primary); font-weight: 600;">${p.total_revenue_formatted}</td>
+        <td class="num" style="color: #38bdf8;">${p.total_profit_formatted}</td>
+        <td class="num"><span class="margin-pill">${p.profit_margin_percentage}%</span></td>
+      `;
+      dom.analyticsTopProductsTbody.appendChild(tr);
+    });
+  }
+
+  function renderWarehouseInventoryRisk(invRisk, restockQueue) {
+    // 1. Overall Health Score
+    if (invRisk) {
+      if (dom.invHealthScoreVal) dom.invHealthScoreVal.textContent = `${invRisk.health_score_percentage}%`;
+      if (dom.invTotalSkusVal) dom.invTotalSkusVal.textContent = invRisk.total_skus;
+      if (dom.invCriticalAlertsVal) dom.invCriticalAlertsVal.textContent = invRisk.critical_alerts_count;
+
+      // 2. Warehouse Cards Grid
+      if (dom.warehouseCardsGrid && Array.isArray(invRisk.warehouse_breakdown)) {
+        dom.warehouseCardsGrid.innerHTML = "";
+        invRisk.warehouse_breakdown.forEach((w) => {
+          const card = document.createElement("div");
+          card.className = "warehouse-card";
+
+          let badgeClass = "normal";
+          if (w.health_status === "High Risk") badgeClass = "high";
+          else if (w.health_status === "Moderate Risk") badgeClass = "moderate";
+
+          card.innerHTML = `
+            <div class="wh-card-header">
+              <span class="wh-name">${w.warehouse} Hub</span>
+              <span class="wh-badge ${badgeClass}">${w.health_status}</span>
+            </div>
+            <div class="wh-stats-grid">
+              <div class="wh-stat-item">
+                <span class="lbl">SKUs Monitored</span>
+                <span class="val">${w.total_skus}</span>
+              </div>
+              <div class="wh-stat-item">
+                <span class="lbl">Total Units</span>
+                <span class="val">${Number(w.total_units).toLocaleString("en-IN")}</span>
+              </div>
+              <div class="wh-stat-item">
+                <span class="lbl">Restock Alerts</span>
+                <span class="val ${w.restock_alerts > 0 ? "alert" : ""}">${w.restock_alerts}</span>
+              </div>
+              <div class="wh-stat-item">
+                <span class="lbl">In-Stock SKUs</span>
+                <span class="val">${w.in_stock_count}</span>
+              </div>
+            </div>
+          `;
+          dom.warehouseCardsGrid.appendChild(card);
+        });
+      }
+    }
+
+    // 3. Restock Priority Queue Table
+    if (dom.analyticsRestockTbody && Array.isArray(restockQueue)) {
       dom.analyticsRestockTbody.innerHTML = "";
 
-      if (data.restock_queue.length === 0) {
-        dom.analyticsRestockTbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted); padding: 16px;">All inventory levels are currently above reorder thresholds.</td></tr>`;
+      if (restockQueue.length === 0) {
+        dom.analyticsRestockTbody.innerHTML = `
+          <tr><td colspan="7" style="text-align: center; color: var(--text-muted); padding: 18px;">All inventory levels are currently above reorder thresholds.</td></tr>
+        `;
       } else {
-        data.restock_queue.forEach((item) => {
+        restockQueue.forEach((item) => {
           const tr = document.createElement("tr");
           const isCritical = Number(item.stock_difference) <= -8;
           const statusClass = isCritical ? "urgent" : "urgent";
-          const statusLabel = isCritical ? "Critical" : "Low";
+          const statusLabel = isCritical ? "Critical" : "Low Stock";
 
           tr.innerHTML = `
             <td>${item.product_name}</td>
+            <td>${item.product_category}</td>
             <td>${item.warehouse}</td>
             <td class="num urgent">${item.stock_quantity}</td>
             <td class="num">${item.reorder_level}</td>
+            <td class="num urgent">${item.stock_difference}</td>
             <td><span class="${statusClass}">${statusLabel}</span></td>
           `;
           dom.analyticsRestockTbody.appendChild(tr);
         });
       }
-    }
-
-    // 4. Update Sync Pill
-    if (dom.analyticsSyncPill) {
-      const isCached = data.cache && data.cache.cached;
-      dom.analyticsSyncPill.innerHTML = `<span>◈</span> Source: dbt Marts (${isCached ? "Cached BigQuery" : "Live BigQuery"})`;
     }
   }
 
@@ -1061,6 +1379,96 @@
         loadDashboardAnalytics(true);
       });
     }
+
+    // Date Range Presets
+    dom.filterPresetBtns.forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const preset = btn.dataset.preset;
+        state.analyticsActivePreset = preset;
+
+        dom.filterPresetBtns.forEach((b) => b.classList.toggle("active", b === btn));
+
+        if (preset === "all") {
+          state.analyticsStartDate = null;
+          state.analyticsEndDate = null;
+          if (dom.analyticsStartDate) dom.analyticsStartDate.value = "";
+          if (dom.analyticsEndDate) dom.analyticsEndDate.value = "";
+        } else if (preset === "fy2026") {
+          state.analyticsStartDate = "2026-01-01";
+          state.analyticsEndDate = "2026-10-31";
+          if (dom.analyticsStartDate) dom.analyticsStartDate.value = "2026-01-01";
+          if (dom.analyticsEndDate) dom.analyticsEndDate.value = "2026-10-31";
+        } else if (preset === "fy2025") {
+          state.analyticsStartDate = "2025-01-01";
+          state.analyticsEndDate = "2025-12-31";
+          if (dom.analyticsStartDate) dom.analyticsStartDate.value = "2025-01-01";
+          if (dom.analyticsEndDate) dom.analyticsEndDate.value = "2025-12-31";
+        } else if (preset === "last90") {
+          state.analyticsStartDate = "2026-08-02";
+          state.analyticsEndDate = "2026-10-31";
+          if (dom.analyticsStartDate) dom.analyticsStartDate.value = "2026-08-02";
+          if (dom.analyticsEndDate) dom.analyticsEndDate.value = "2026-10-31";
+        } else if (preset === "last30") {
+          state.analyticsStartDate = "2026-10-01";
+          state.analyticsEndDate = "2026-10-31";
+          if (dom.analyticsStartDate) dom.analyticsStartDate.value = "2026-10-01";
+          if (dom.analyticsEndDate) dom.analyticsEndDate.value = "2026-10-31";
+        }
+
+        loadDashboardAnalytics(false);
+      });
+    });
+
+    // Custom Date Range Apply Button
+    if (dom.btnApplyDateFilter) {
+      dom.btnApplyDateFilter.addEventListener("click", (e) => {
+        e.preventDefault();
+        const startVal = dom.analyticsStartDate ? dom.analyticsStartDate.value.trim() : "";
+        const endVal = dom.analyticsEndDate ? dom.analyticsEndDate.value.trim() : "";
+
+        if (startVal && endVal && startVal > endVal) {
+          showToast("Start date cannot be after end date", false);
+          return;
+        }
+
+        state.analyticsStartDate = startVal || null;
+        state.analyticsEndDate = endVal || null;
+        state.analyticsActivePreset = null;
+        dom.filterPresetBtns.forEach((b) => b.classList.remove("active"));
+
+        loadDashboardAnalytics(false);
+      });
+    }
+
+    // Custom Date Range Reset Button
+    if (dom.btnResetDateFilter) {
+      dom.btnResetDateFilter.addEventListener("click", (e) => {
+        e.preventDefault();
+        state.analyticsStartDate = null;
+        state.analyticsEndDate = null;
+        state.analyticsActivePreset = "all";
+        if (dom.analyticsStartDate) dom.analyticsStartDate.value = "";
+        if (dom.analyticsEndDate) dom.analyticsEndDate.value = "";
+        dom.filterPresetBtns.forEach((b) => b.classList.toggle("active", b.dataset.preset === "all"));
+
+        loadDashboardAnalytics(false);
+      });
+    }
+
+    // Granularity Toggle Buttons (Monthly / Daily)
+    dom.granularityBtns.forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        const gran = btn.dataset.granularity;
+        if (!gran || gran === state.analyticsGranularity) return;
+
+        state.analyticsGranularity = gran;
+        dom.granularityBtns.forEach((b) => b.classList.toggle("active", b === btn));
+
+        loadDashboardAnalytics(false);
+      });
+    });
 
     // "Ask AI" buttons on Analytics Page
     $$(".btn-ask-widget").forEach((btn) => {

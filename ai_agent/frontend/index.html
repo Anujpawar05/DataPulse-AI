@@ -267,12 +267,48 @@
             </div>
           </div>
 
+          <!-- Interactive Date Filter & Granularity Toolbar -->
+          <div class="analytics-filter-toolbar">
+            <div class="filter-presets-group" role="group" aria-label="Date Range Presets">
+              <span class="filter-group-label">Range:</span>
+              <button type="button" class="filter-preset-btn active" data-preset="all">All Time</button>
+              <button type="button" class="filter-preset-btn" data-preset="fy2026">FY 2026 YTD</button>
+              <button type="button" class="filter-preset-btn" data-preset="fy2025">FY 2025</button>
+              <button type="button" class="filter-preset-btn" data-preset="last90">Last 90 Days</button>
+              <button type="button" class="filter-preset-btn" data-preset="last30">Last 30 Days</button>
+            </div>
+
+            <div class="custom-date-inputs">
+              <div class="date-input-field">
+                <label for="analyticsStartDate">From</label>
+                <input type="date" id="analyticsStartDate" min="2025-01-01" max="2026-10-31" placeholder="YYYY-MM-DD">
+              </div>
+              <span class="date-separator">→</span>
+              <div class="date-input-field">
+                <label for="analyticsEndDate">To</label>
+                <input type="date" id="analyticsEndDate" min="2025-01-01" max="2026-10-31" placeholder="YYYY-MM-DD">
+              </div>
+              <button type="button" id="btnApplyDateFilter" class="btn-filter-apply" title="Apply date filters">
+                Apply
+              </button>
+              <button type="button" id="btnResetDateFilter" class="btn-filter-reset" title="Reset date filters">
+                Reset
+              </button>
+            </div>
+
+            <div class="granularity-toggle-group" role="group" aria-label="Trends Granularity">
+              <span class="filter-group-label">Trends:</span>
+              <button type="button" class="granularity-btn active" data-granularity="monthly">Monthly</button>
+              <button type="button" class="granularity-btn" data-granularity="daily">Daily</button>
+            </div>
+          </div>
+
           <!-- Metrics KPI Grid -->
           <div class="metrics-kpi-grid">
             <div class="kpi-card highlight">
               <div class="kpi-topline">
                 <span>Total Net Revenue</span>
-                <span>YTD</span>
+                <span id="kpiRevenuePeriodLabel">All Time</span>
               </div>
               <div class="kpi-value" id="kpiRevenueValue">₹47.59 Cr</div>
               <div class="kpi-subline">
@@ -310,6 +346,32 @@
               <div class="kpi-value" id="kpiInventoryValue">100 SKUs</div>
               <div class="kpi-subline">
                 <span class="trend-indicator down" id="kpiInventorySub">4 alerts below reorder level</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Revenue & Profit Trends Chart (Full Width) -->
+          <div class="analytics-widget-card full-width">
+            <div class="widget-card-header">
+              <div class="widget-title-block">
+                <h3>Revenue & Profit Trends</h3>
+                <p id="trendChartSubtitle">Model: fct_daily_sales · Monthly aggregation · Chronological warehouse telemetry</p>
+              </div>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="chart-legend-row">
+                  <span class="legend-chip"><span class="legend-color line-revenue"></span> Net Revenue</span>
+                  <span class="legend-chip"><span class="legend-color line-profit"></span> Total Profit</span>
+                </div>
+                <button type="button" class="btn-ask-widget" data-quick-question="Show monthly net revenue, total profit, and profit margin chronologically across the entire warehouse dataset.">
+                  <span>✳</span> Ask AI
+                </button>
+              </div>
+            </div>
+
+            <div class="trend-chart-viewport" id="trendChartViewport">
+              <div class="chart-tooltip" id="chartTooltip" style="display: none;"></div>
+              <div class="svg-chart-container" id="revenueTrendChartContainer">
+                <!-- SVG dynamically injected by renderRevenueTrendChart() -->
               </div>
             </div>
           </div>
@@ -371,13 +433,82 @@
               </div>
             </div>
 
-            <!-- Widget 2: Inventory Restock Monitor -->
+            <!-- Widget 2: Top 10 Products by Revenue -->
             <div class="analytics-widget-card">
               <div class="widget-card-header">
                 <div class="widget-title-block">
-                  <h3>Restock Priority Queue</h3>
-                  <p>Model: fct_inventory · Critical stock vs reorder level</p>
+                  <h3>Top 10 Products by Revenue</h3>
+                  <p>Model: fct_sales · Product performance leaderboard</p>
                 </div>
+                <button type="button" class="btn-ask-widget" data-quick-question="Show the top 10 products by total revenue, including product name, category, units sold, and profit margin.">
+                  <span>✳</span> Ask AI
+                </button>
+              </div>
+
+              <div class="top-products-table-wrapper">
+                <table class="mini-table top-products-table">
+                  <thead>
+                    <tr>
+                      <th class="rank">#</th>
+                      <th>Product</th>
+                      <th class="num">Units</th>
+                      <th class="num">Revenue</th>
+                      <th class="num">Profit</th>
+                      <th class="num">Margin</th>
+                    </tr>
+                  </thead>
+                  <tbody id="analyticsTopProductsTbody">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Inventory Risk & Warehouse Breakdown (Full Width) -->
+          <div class="analytics-widget-card full-width">
+            <div class="widget-card-header">
+              <div class="widget-title-block">
+                <h3>Warehouse Inventory Risk Analysis</h3>
+                <p>Model: fct_inventory · Real-time physical warehouse snapshot</p>
+              </div>
+              <div class="snapshot-warning-pill">
+                <span>⚡</span> Current Snapshot (Real-Time Physical Stock)
+              </div>
+            </div>
+
+            <!-- Warehouse Cards Grid & Health Score -->
+            <div class="inventory-risk-layout">
+              <div class="inventory-health-summary-box">
+                <div class="health-gauge-wrap">
+                  <div class="health-score-val" id="invHealthScoreVal">90.0%</div>
+                  <div class="health-score-label">In-Stock Health</div>
+                </div>
+                <div class="health-meta-details">
+                  <div class="health-stat-line">
+                    <span>Total Warehouse SKUs</span>
+                    <strong id="invTotalSkusVal">30</strong>
+                  </div>
+                  <div class="health-stat-line">
+                    <span>Critical Restock Alerts</span>
+                    <strong class="urgent" id="invCriticalAlertsVal">4</strong>
+                  </div>
+                  <div class="health-stat-line">
+                    <span>Monitored Locations</span>
+                    <span>3 Hubs</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="warehouse-cards-grid" id="warehouseCardsGrid">
+                <!-- Dynamically populated with Mumbai, Pune, Nagpur cards -->
+              </div>
+            </div>
+
+            <!-- Restock Priority Queue -->
+            <div class="restock-queue-subpanel">
+              <div class="subpanel-header">
+                <h4>Restock Priority Queue</h4>
                 <button type="button" class="btn-ask-widget" data-quick-question="Show all products that require restocking, including product name, category, warehouse, stock quantity, and reorder level. Sort by lowest stock quantity first.">
                   <span>✳</span> Ask AI
                 </button>
@@ -387,40 +518,23 @@
                 <thead>
                   <tr>
                     <th>Product</th>
+                    <th>Category</th>
                     <th>Warehouse</th>
                     <th class="num">Stock</th>
                     <th class="num">Reorder</th>
+                    <th class="num">Deficit</th>
                     <th>Status</th>
                   </tr>
                 </thead>
                 <tbody id="analyticsRestockTbody">
                   <tr>
-                    <td>Wireless ANC Headphones</td>
-                    <td>WH-North</td>
-                    <td class="num urgent">8</td>
-                    <td class="num">25</td>
+                    <td>Sports Product 005</td>
+                    <td>Sports</td>
+                    <td>Pune</td>
+                    <td class="num urgent">10</td>
+                    <td class="num">20</td>
+                    <td class="num urgent">-10</td>
                     <td><span class="urgent">Critical</span></td>
-                  </tr>
-                  <tr>
-                    <td>Ergonomic Mech Keyboard</td>
-                    <td>WH-South</td>
-                    <td class="num urgent">12</td>
-                    <td class="num">30</td>
-                    <td><span class="urgent">Low</span></td>
-                  </tr>
-                  <tr>
-                    <td>Ultra HD 4K Monitor 27"</td>
-                    <td>WH-West</td>
-                    <td class="num urgent">15</td>
-                    <td class="num">35</td>
-                    <td><span class="urgent">Low</span></td>
-                  </tr>
-                  <tr>
-                    <td>USB-C Fast Charging Hub</td>
-                    <td>WH-Central</td>
-                    <td class="num">22</td>
-                    <td class="num">40</td>
-                    <td><span>Monitor</span></td>
                   </tr>
                 </tbody>
               </table>

@@ -1490,6 +1490,526 @@ a {
   font-weight: 600;
 }
 
+
+/* =============================================================================
+   Phase 8.2: Interactive Analytics Controls, Trends Chart, & Warehouse Risk
+   ============================================================================= */
+
+/* Filter Toolbar */
+.analytics-filter-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  background-color: var(--panel-bg);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 10px 16px;
+}
+
+.filter-presets-group,
+.custom-date-inputs,
+.granularity-toggle-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-group-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.filter-preset-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background-color: var(--panel-surface);
+  border: 1px solid var(--border-medium);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.filter-preset-btn:hover {
+  border-color: var(--accent-lime);
+  color: var(--accent-lime);
+}
+
+.filter-preset-btn.active {
+  background-color: var(--accent-lime-dim);
+  border-color: var(--accent-lime);
+  color: var(--accent-lime);
+  box-shadow: 0 0 10px var(--accent-lime-dim);
+}
+
+.date-input-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.date-input-field label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.date-input-field input[type="date"] {
+  background-color: var(--panel-surface);
+  border: 1px solid var(--border-medium);
+  color: var(--text-primary);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color-scheme: dark;
+  outline: none;
+  transition: border-color var(--transition-fast);
+}
+
+.date-input-field input[type="date"]:focus {
+  border-color: var(--accent-lime);
+}
+
+.date-separator {
+  color: var(--text-faint);
+  font-size: 12px;
+}
+
+.btn-filter-apply {
+  background-color: var(--accent-lime);
+  color: var(--accent-ink);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--accent-lime);
+  transition: all var(--transition-fast);
+}
+
+.btn-filter-apply:hover {
+  background-color: var(--accent-lime-hover);
+  box-shadow: 0 0 12px var(--accent-lime-glow);
+}
+
+.btn-filter-reset {
+  background-color: var(--panel-surface);
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-medium);
+  transition: all var(--transition-fast);
+}
+
+.btn-filter-reset:hover {
+  color: var(--text-primary);
+  border-color: var(--border-active);
+}
+
+.granularity-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background-color: var(--panel-surface);
+  border: 1px solid var(--border-medium);
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+}
+
+.granularity-btn:hover {
+  border-color: var(--accent-lime);
+  color: var(--accent-lime);
+}
+
+.granularity-btn.active {
+  background-color: var(--accent-lime);
+  color: var(--accent-ink);
+  border-color: var(--accent-lime);
+  font-weight: 700;
+}
+
+/* Full Width Card */
+.analytics-widget-card.full-width {
+  width: 100%;
+}
+
+/* Revenue & Profit Trends Chart */
+.trend-chart-viewport {
+  position: relative;
+  width: 100%;
+  background-color: var(--panel-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 16px 12px 10px;
+  overflow: hidden;
+}
+
+.svg-chart-container {
+  width: 100%;
+  height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.trend-chart-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.chart-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.legend-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+}
+
+.legend-color {
+  width: 12px;
+  height: 3px;
+  border-radius: 2px;
+}
+
+.legend-color.line-revenue {
+  background-color: var(--accent-lime);
+}
+
+.legend-color.line-profit {
+  background-color: #38bdf8;
+}
+
+/* Chart Floating Tooltip */
+.chart-tooltip {
+  position: absolute;
+  z-index: 50;
+  pointer-events: none;
+  background: rgba(13, 17, 23, 0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--border-medium);
+  border-radius: 8px;
+  padding: 10px 14px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+  font-size: 11px;
+  color: var(--text-primary);
+  transform: translate(-50%, -115%);
+  transition: opacity 0.15s ease, transform 0.05s ease-out;
+  min-width: 170px;
+}
+
+.chart-tooltip .tt-title {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 4px;
+}
+
+.chart-tooltip .tt-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 3px;
+}
+
+.chart-tooltip .tt-row .label {
+  color: var(--text-muted);
+}
+
+.chart-tooltip .tt-row .val {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.chart-tooltip .tt-row .val.revenue {
+  color: var(--accent-lime);
+}
+
+.chart-tooltip .tt-row .val.profit {
+  color: #38bdf8;
+}
+
+/* Top 10 Products Table */
+.top-products-table-wrapper {
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.top-products-table th,
+.top-products-table td {
+  padding: 8px 10px;
+}
+
+.top-products-table .rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  background-color: var(--panel-surface);
+  color: var(--text-muted);
+}
+
+.top-products-table tr:nth-child(1) .rank-badge {
+  background-color: rgba(250, 204, 21, 0.15);
+  color: #facc15;
+  border: 1px solid rgba(250, 204, 21, 0.3);
+}
+
+.top-products-table tr:nth-child(2) .rank-badge {
+  background-color: rgba(203, 213, 225, 0.15);
+  color: #cbd5e1;
+  border: 1px solid rgba(203, 213, 225, 0.3);
+}
+
+.top-products-table tr:nth-child(3) .rank-badge {
+  background-color: rgba(251, 146, 60, 0.15);
+  color: #fb923c;
+  border: 1px solid rgba(251, 146, 60, 0.3);
+}
+
+.prod-meta-name {
+  display: flex;
+  flex-direction: column;
+}
+
+.prod-title {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.prod-category {
+  font-size: 10px;
+  color: var(--text-faint);
+}
+
+.margin-pill {
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  background-color: var(--status-green-dim);
+  color: var(--status-green);
+}
+
+/* Warehouse Inventory Risk */
+.snapshot-warning-pill {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--status-amber);
+  background-color: var(--status-amber-dim);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  padding: 4px 10px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inventory-risk-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.inventory-health-summary-box {
+  background-color: var(--panel-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.health-gauge-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 10px;
+  background-color: rgba(74, 222, 128, 0.05);
+  border: 1px dashed rgba(74, 222, 128, 0.2);
+  border-radius: 8px;
+}
+
+.health-score-val {
+  font-size: 32px;
+  font-weight: 800;
+  font-family: var(--font-display);
+  color: var(--status-green);
+  letter-spacing: -0.5px;
+}
+
+.health-score-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+.health-meta-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.health-stat-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text-muted);
+}
+
+.health-stat-line strong {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+}
+
+.health-stat-line strong.urgent {
+  color: var(--status-red);
+}
+
+.warehouse-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.warehouse-card {
+  background-color: var(--panel-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color var(--transition-fast);
+}
+
+.warehouse-card:hover {
+  border-color: var(--border-active);
+}
+
+.wh-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.wh-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.wh-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.wh-badge.normal {
+  background-color: var(--status-green-dim);
+  color: var(--status-green);
+  border: 1px solid rgba(74, 222, 128, 0.25);
+}
+
+.wh-badge.moderate {
+  background-color: var(--status-amber-dim);
+  color: var(--status-amber);
+  border: 1px solid rgba(251, 191, 36, 0.25);
+}
+
+.wh-badge.high {
+  background-color: var(--status-red-dim);
+  color: var(--status-red);
+  border: 1px solid rgba(248, 113, 113, 0.25);
+}
+
+.wh-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.wh-stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.wh-stat-item .lbl {
+  font-size: 10px;
+  color: var(--text-faint);
+  text-transform: uppercase;
+}
+
+.wh-stat-item .val {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+.wh-stat-item .val.alert {
+  color: var(--status-red);
+}
+
+.restock-queue-subpanel {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.subpanel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.subpanel-header h4 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+
 /* =============================================================================
    VIEW 3: Data Warehouse Workspace
    ============================================================================= */
