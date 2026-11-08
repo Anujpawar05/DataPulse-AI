@@ -495,6 +495,19 @@ a {
   background-color: var(--status-red);
 }
 
+.topbar-badge.checking {
+  border-color: rgba(251, 191, 36, 0.3);
+  color: var(--status-amber);
+}
+
+.topbar-badge.checking .badge-indicator {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: var(--status-amber);
+  animation: pulse-ring 1.2s infinite ease-out;
+}
+
 .topbar-btn-refresh {
   background-color: var(--panel-surface);
   border: 1px solid var(--border-subtle);
@@ -2364,3 +2377,469 @@ a {
   }
 }
 
+
+
+/* =============================================================================
+   Phase 8.3: Executive AI Insights & Anomaly Radar Styles
+   ============================================================================= */
+
+.insights-radar-card {
+  border: 1px solid var(--border-medium);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  position: relative;
+}
+
+.radar-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--accent-lime);
+  box-shadow: 0 0 8px var(--accent-lime);
+  display: inline-block;
+  animation: pulseDot 2.2s infinite;
+}
+
+.insights-top-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.insights-filter-pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.insight-filter-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-medium);
+  background-color: var(--panel-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: all var(--transition-fast);
+}
+
+.insight-filter-pill:hover {
+  border-color: var(--border-active);
+  color: var(--text-primary);
+}
+
+.insight-filter-pill.active {
+  background-color: var(--panel-elevated);
+  border-color: var(--accent-lime);
+  color: var(--accent-lime);
+}
+
+.pill-count {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  padding: 1px 5px;
+  border-radius: 4px;
+  background-color: var(--panel-surface);
+  color: var(--text-muted);
+}
+
+.pill-count.urgent {
+  color: var(--status-red);
+  background-color: var(--status-red-dim);
+}
+
+.pill-count.warning {
+  color: var(--status-amber);
+  background-color: var(--status-amber-dim);
+}
+
+.pill-count.opportunity {
+  color: var(--accent-lime);
+  background-color: var(--accent-lime-dim);
+}
+
+.btn-scan-insights {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #bef264, #a3e635);
+  color: var(--accent-ink);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: 1px solid var(--accent-lime);
+}
+
+.btn-scan-insights:hover {
+  background: #d9f99d;
+  box-shadow: 0 0 12px var(--accent-lime-glow);
+  transform: translateY(-1px);
+}
+
+.insights-deck-viewport {
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.insights-loading-state,
+.insights-empty-state,
+.insights-error-state {
+  padding: 32px 20px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.empty-radar-icon {
+  font-size: 28px;
+  color: var(--status-green);
+  opacity: 0.8;
+}
+
+.insights-empty-state h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.insights-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Insight Card */
+.insight-card {
+  background-color: var(--panel-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  transition: border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.insight-card:hover {
+  border-color: var(--border-active);
+}
+
+.insight-card.severity-critical {
+  border-left: 4px solid var(--status-red);
+}
+
+.insight-card.severity-warning {
+  border-left: 4px solid var(--status-amber);
+}
+
+.insight-card.severity-opportunity {
+  border-left: 4px solid var(--accent-lime);
+}
+
+.insight-card.severity-info {
+  border-left: 4px solid var(--status-blue);
+}
+
+.insight-card.status-acknowledged {
+  opacity: 0.65;
+}
+
+.insight-card.status-dismissed {
+  display: none;
+}
+
+.insight-card-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.insight-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.severity-badge {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.severity-badge.critical {
+  background-color: var(--status-red-dim);
+  color: var(--status-red);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+.severity-badge.warning {
+  background-color: var(--status-amber-dim);
+  color: var(--status-amber);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.severity-badge.opportunity {
+  background-color: var(--accent-lime-dim);
+  color: var(--accent-lime);
+  border: 1px solid rgba(190, 242, 100, 0.3);
+}
+
+.severity-badge.info {
+  background-color: var(--status-blue-dim);
+  color: var(--status-blue);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.category-tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detection-method-tag {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--text-faint);
+  background-color: rgba(255, 255, 255, 0.04);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.insight-topbar-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+}
+
+.confidence-badge {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--status-green);
+  background-color: var(--status-green-dim);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.insight-time {
+  color: var(--text-faint);
+  font-size: 11px;
+}
+
+.insight-headline {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.2px;
+}
+
+/* Two-Tier Truth Display */
+.insight-body-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 900px) {
+  .insight-body-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.fact-block {
+  background-color: rgba(13, 17, 23, 0.65);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fact-block .block-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: #38bdf8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.fact-text {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.fact-meta-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.fact-meta-chips code {
+  font-family: var(--font-mono);
+  background-color: rgba(255, 255, 255, 0.06);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--text-primary);
+}
+
+.ai-block {
+  background-color: rgba(190, 242, 100, 0.03);
+  border: 1px solid rgba(190, 242, 100, 0.16);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-block .block-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--accent-lime);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ai-text {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.rec-subblock {
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(190, 242, 100, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rec-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: #a3e635;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.rec-text {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Actions Row */
+.insight-actions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 2px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(34, 43, 59, 0.4);
+}
+
+.evidence-accordion {
+  font-size: 11px;
+}
+
+.btn-evidence-toggle {
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 600;
+  user-select: none;
+}
+
+.btn-evidence-toggle:hover {
+  color: var(--text-primary);
+}
+
+.evidence-content {
+  margin-top: 8px;
+  max-height: 140px;
+  overflow: auto;
+  border-radius: 6px;
+}
+
+.card-btn-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-card-action {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 5px;
+  border: 1px solid var(--border-medium);
+  background-color: var(--panel-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-card-action:hover {
+  color: var(--text-primary);
+  border-color: var(--border-active);
+}
+
+.btn-card-action.ask-assistant {
+  background-color: var(--accent-lime-dim);
+  border-color: rgba(190, 242, 100, 0.3);
+  color: var(--accent-lime);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-card-action.ask-assistant:hover {
+  background-color: var(--accent-lime);
+  color: var(--accent-ink);
+}
+
+.btn-card-action.dismiss:hover {
+  color: var(--status-red);
+  border-color: rgba(248, 113, 113, 0.4);
+}

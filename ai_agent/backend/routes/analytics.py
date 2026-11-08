@@ -13,10 +13,16 @@ from ai_agent.backend.sql.bigquery_executor import (
     BigQueryExecutionError,
 )
 from ai_agent.backend.sql.validator import SQLValidationError
+from ai_agent.backend.analytics.insights_store import InsightsStore
+from ai_agent.backend.analytics.insights_analyzer import AnomalyInsightsAnalyzer
+from ai_agent.backend.analytics.insights_generator import GroundedInsightsGenerator
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
 bigquery_executor = BigQueryExecutor()
+insights_store = InsightsStore()
+insights_analyzer = AnomalyInsightsAnalyzer(bigquery_executor)
+insights_generator = GroundedInsightsGenerator(store=insights_store)
 
 CACHE_TTL_SECONDS = 600  # 10 minutes cache duration
 _cache_lock = threading.Lock()
@@ -116,6 +122,45 @@ class CacheMeta(BaseModel):
     cached: bool
     cached_at: str
     expires_in_seconds: int
+
+
+class BusinessInsightItem(BaseModel):
+    insight_id: str
+    created_at: str
+    updated_at: str
+    category: str
+    severity: str
+    status: str
+    headline: str
+    observed_fact: str
+    ai_explanation: str
+    actionable_recommendation: str
+    metric_name: str
+    observed_value: float
+    observed_value_formatted: str
+    baseline_value: Optional[float] = None
+    baseline_value_formatted: Optional[str] = None
+    change_percentage: Optional[float] = None
+    statistical_score: Optional[float] = None
+    detection_method: str
+    period_start: str
+    period_end: str
+    warehouse_table: str
+    supporting_sql: str
+    confidence_score: float
+    ai_provider_used: str
+    dimension_key: str
+
+
+class InsightsListResponse(BaseModel):
+    total_insights: int
+    active_critical_count: int
+    insights: list[BusinessInsightItem]
+    generated_at: str
+
+
+class StatusUpdateRequest(BaseModel):
+    status: str = Field(..., pattern="^(active|acknowledged|dismissed|resolved)$")
 
 
 class DashboardAnalyticsResponse(BaseModel):
@@ -610,3 +655,99 @@ def get_dashboard_analytics(
                 status_code=500,
                 detail=f"Failed to retrieve dashboard analytics: {str(exc)}",
             ) from exc
+
+
+# =============================================================================
+# Phase 8.3: Advanced AI Business Insights & Anomaly Detection Endpoints
+# =============================================================================
+
+@router.get("/insights", response_model=InsightsListResponse)
+def get_business_insights(
+    category: Optional[str] = Query(
+        default=None,
+        pattern="^(revenue_trend|profit_margin|category_shift|product_anomaly|inventory_risk|order_payment_anomaly)$",
+        description="Filter by insight category",
+    ),
+    severity: Optional[str] = Query(
+        default=None,
+        pattern="^(critical|warning|opportunity|info)$",
+        description="Filter by severity level",
+    ),
+    status: Optional[str] = Query(
+        default=None,
+        pattern="^(active|acknowledged|dismissed|resolved)$",
+        description="Filter by executive review status",
+    ),
+    limit: int = Query(
+        default=50,
+        ge=1,
+        le=100,
+        description="Maximum insights to retrieve",
+    ),
+):
+    """Retrieve stored AI business insights with filtering by category, severity, and status."""
+    items = insights_store.get_insights(
+        category=category,
+        severity=severity,
+        status=status,
+        limit=limit,
+    )
+    critical_count = insights_store.count_active_critical()
+    return jsonable_encoder(
+        InsightsListResponse(
+            total_insights=len(items),
+            active_critical_count=critical_count,
+            insights=items,
+            generated_at=datetime.now(timezone.utc).isoformat(),
+        )
+    )
+
+
+@router.post("/insights/generate", response_model=InsightsListResponse)
+def generate_business_insights(
+    refresh_warehouse: bool = Query(
+        default=False,
+        description="Run an on-demand full warehouse scan to detect new statistical anomalies",
+    ),
+):
+    """On-demand scan: executes deterministic BigQuery anomaly detection and LLM explanation generation."""
+    try:
+        facts = insights_analyzer.analyze_warehouse_anomalies()
+        insights_generator.process_and_persist_facts(facts, force_llm=True)
+        items = insights_store.get_insights(limit=50)
+        critical_count = insights_store.count_active_critical()
+        return jsonable_encoder(
+            InsightsListResponse(
+                total_insights=len(items),
+                active_critical_count=critical_count,
+                insights=items,
+                generated_at=datetime.now(timezone.utc).isoformat(),
+            )
+        )
+    except SQLValidationError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Security validation rejected anomaly query: {exc}",
+        ) from exc
+    except BigQueryExecutionError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Warehouse execution failed during anomaly scan: {exc}",
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate business insights: {str(exc)}",
+        ) from exc
+
+
+@router.patch("/insights/{insight_id}/status", response_model=BusinessInsightItem)
+def update_insight_status(insight_id: str, payload: StatusUpdateRequest):
+    """Update the executive status (acknowledged, dismissed, resolved) of a business insight."""
+    updated = insights_store.update_insight_status(insight_id, payload.status)
+    if not updated:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Insight with ID '{insight_id}' not found.",
+        )
+    return jsonable_encoder(updated)

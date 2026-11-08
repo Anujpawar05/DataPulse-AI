@@ -17,6 +17,7 @@
     activeRequestId: 0,
     activeAbortController: null,
     backendOnline: false,
+    healthCheckInProgress: false,
     activeView: "assistant",
     queryHistory: [],
     toastTimer: null,
@@ -25,6 +26,9 @@
     analyticsGranularity: "monthly",
     analyticsActivePreset: "all",
     analyticsData: null,
+    insightsList: [],
+    insightsFilterSeverity: "all",
+    insightsLoading: false,
   };
 
   // Safe DOM Elements Helper
@@ -88,6 +92,20 @@
     invCriticalAlertsVal: $("invCriticalAlertsVal"),
     warehouseCardsGrid: $("warehouseCardsGrid"),
     analyticsRestockTbody: $("analyticsRestockTbody"),
+
+    // Phase 8.3: Executive AI Insights & Anomaly Radar
+    btnScanInsights: $("btnScanInsights"),
+    btnScanInsightsEmpty: $("btnScanInsightsEmpty"),
+    insightsLoadingState: $("insightsLoadingState"),
+    insightsEmptyState: $("insightsEmptyState"),
+    insightsErrorState: $("insightsErrorState"),
+    insightsErrorMessage: $("insightsErrorMessage"),
+    insightsCardsList: $("insightsCardsList"),
+    insightFilterPills: $$(".insight-filter-pill"),
+    countAllInsights: $("countAllInsights"),
+    countCriticalInsights: $("countCriticalInsights"),
+    countWarningInsights: $("countWarningInsights"),
+    countOpportunityInsights: $("countOpportunityInsights"),
 
     // History View
     historyListContainer: $("historyListContainer"),
@@ -170,42 +188,107 @@
   // Backend Health Check
   // ===========================================================================
 
-  async function checkBackendHealth() {
+  const HEALTH_TIMEOUT_MS = 5000; // 5 seconds health check timeout
+
+  function setCheckingUI() {
+    if (dom.topbarConnectionBadge) {
+      dom.topbarConnectionBadge.className = "topbar-badge checking";
+      dom.topbarConnectionBadge.title = "Checking backend health...";
+    }
+    if (dom.topbarConnectionText) {
+      dom.topbarConnectionText.textContent = "Connecting...";
+    }
     if (dom.sidebarPulsePill) {
       dom.sidebarPulsePill.className = "status-pulse-pill checking";
+      dom.sidebarPulsePill.title = "Checking backend health...";
+    }
+    if (dom.sidebarStatusText) {
       dom.sidebarStatusText.textContent = "Checking...";
     }
+  }
+
+  function setConnectionUI(isOnline, labelText, diagnosticDetail = "") {
+    if (dom.topbarConnectionBadge) {
+      dom.topbarConnectionBadge.className = `topbar-badge ${isOnline ? "live" : "offline"}`;
+      dom.topbarConnectionBadge.title = diagnosticDetail || (isOnline ? "Backend Connected (HTTP 200)" : "Backend Disconnected");
+    }
+    if (dom.topbarConnectionText) {
+      dom.topbarConnectionText.textContent = isOnline ? "Connected" : "Disconnected";
+    }
+
+    if (dom.sidebarPulsePill) {
+      dom.sidebarPulsePill.className = `status-pulse-pill ${isOnline ? "online" : "offline"}`;
+      dom.sidebarPulsePill.title = diagnosticDetail || (isOnline ? "FastAPI Status: Healthy" : "FastAPI Status: Offline");
+    }
+    if (dom.sidebarStatusText) {
+      dom.sidebarStatusText.textContent = isOnline ? "Connected" : "Disconnected";
+    }
+  }
+
+  async function checkBackendHealth() {
+    if (state.healthCheckInProgress) {
+      return;
+    }
+    state.healthCheckInProgress = true;
+    setCheckingUI();
+
+    const controller = new AbortController();
+    const timeoutTimer = setTimeout(() => {
+      controller.abort();
+    }, HEALTH_TIMEOUT_MS);
 
     try {
       const startTime = performance.now();
       const response = await fetch(`${API_BASE_URL}/health`, {
         method: "GET",
+        headers: { "Accept": "application/json" },
         cache: "no-store",
+        signal: controller.signal,
       });
+      clearTimeout(timeoutTimer);
       const latency = Math.round(performance.now() - startTime);
 
       if (response.ok) {
-        state.backendOnline = true;
-        setConnectionUI(true, `Online (${latency}ms)`);
+        let isHealthy = false;
+        let serviceName = "DataPulse AI Agent";
+        try {
+          const data = await response.json();
+          if (data && (data.status === "healthy" || data.status === "ok")) {
+            isHealthy = true;
+            serviceName = data.service || serviceName;
+          }
+        } catch {
+          // If response body is empty or non-JSON but status is 200 OK
+          isHealthy = true;
+        }
+
+        if (isHealthy) {
+          state.backendOnline = true;
+          setConnectionUI(true, "Connected", `${serviceName} online (${latency}ms)`);
+        } else {
+          state.backendOnline = false;
+          setConnectionUI(false, "Disconnected", `Unexpected health response from backend (HTTP ${response.status})`);
+        }
       } else {
         state.backendOnline = false;
-        setConnectionUI(false, `HTTP ${response.status}`);
+        setConnectionUI(false, "Disconnected", `Backend returned HTTP ${response.status}`);
       }
-    } catch {
+    } catch (err) {
+      clearTimeout(timeoutTimer);
       state.backendOnline = false;
-      setConnectionUI(false, "API Offline");
-    }
-  }
-
-  function setConnectionUI(isOnline, labelText) {
-    if (dom.topbarConnectionBadge) {
-      dom.topbarConnectionBadge.className = `topbar-badge ${isOnline ? "live" : "offline"}`;
-      dom.topbarConnectionText.textContent = isOnline ? `Backend ${labelText}` : labelText;
-    }
-
-    if (dom.sidebarPulsePill) {
-      dom.sidebarPulsePill.className = `status-pulse-pill ${isOnline ? "online" : "offline"}`;
-      dom.sidebarStatusText.textContent = isOnline ? "Connected" : "Disconnected";
+      let diagMessage = "API Offline";
+      if (err.name === "AbortError") {
+        diagMessage = `Connection timed out after ${HEALTH_TIMEOUT_MS / 1000}s`;
+      } else if (err instanceof TypeError) {
+        diagMessage = `Cannot reach ${API_BASE_URL}. Ensure FastAPI is running on port 8001.`;
+      } else {
+        diagMessage = err.message || "Connection failed";
+      }
+      setConnectionUI(false, "Disconnected", diagMessage);
+      console.warn("Backend health check failed:", diagMessage);
+    } finally {
+      clearTimeout(timeoutTimer);
+      state.healthCheckInProgress = false;
     }
   }
 
@@ -218,6 +301,10 @@
 
     if (dom.btnSendQuery) {
       dom.btnSendQuery.disabled = busy;
+    }
+
+    if (dom.queryInput) {
+      dom.queryInput.disabled = busy;
     }
 
     if (dom.loadingContainer) {
@@ -609,8 +696,11 @@
       return;
     }
 
-    // Capture the current textarea draft
-    const inputDraft = dom.queryInput ? dom.queryInput.value : "";
+    // Clear input immediately after submission is successfully initiated
+    if (dom.queryInput) {
+      dom.queryInput.value = "";
+      autosizeTextarea();
+    }
 
     // Track Request Sequence & AbortController
     const currentRequestId = ++state.activeRequestId;
@@ -698,11 +788,7 @@
         timestamp: new Date().toISOString(),
       });
 
-      // Clear input ONLY upon success if the input matched what was submitted
-      if (!isFromSuggestion && dom.queryInput && dom.queryInput.value === inputDraft) {
-        dom.queryInput.value = "";
-        autosizeTextarea();
-      }
+
     } catch (err) {
       // Stale response guard
       if (currentRequestId !== state.activeRequestId) {
@@ -1267,6 +1353,261 @@
   }
 
   // ===========================================================================
+  // Phase 8.3: Executive AI Insights & Anomaly Radar
+  // ===========================================================================
+
+  async function loadInsights() {
+    if (!dom.insightsCardsList) return;
+
+    try {
+      if (dom.insightsLoadingState && state.insightsList.length === 0) {
+        dom.insightsLoadingState.style.display = "flex";
+      }
+      if (dom.insightsErrorState) dom.insightsErrorState.style.display = "none";
+      if (dom.insightsEmptyState) dom.insightsEmptyState.style.display = "none";
+
+      const res = await fetch(`${API_BASE_URL}/analytics/insights?limit=50`, {
+        method: "GET",
+        headers: { "Accept": "application/json" },
+      });
+
+      if (!res.ok) {
+        throw new Error(`Insights API returned HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      state.insightsList = Array.isArray(data.insights) ? data.insights : [];
+      renderInsightsList();
+      updateInsightCounts();
+    } catch (err) {
+      console.warn("Failed to load business insights:", err);
+      if (dom.insightsErrorState) {
+        dom.insightsErrorState.style.display = "flex";
+        if (dom.insightsErrorMessage) {
+          dom.insightsErrorMessage.textContent = `Insights unavailable: ${err.message}`;
+        }
+      }
+    } finally {
+      if (dom.insightsLoadingState) dom.insightsLoadingState.style.display = "none";
+    }
+  }
+
+  async function scanInsights() {
+    if (state.insightsLoading) return;
+    state.insightsLoading = true;
+
+    if (dom.btnScanInsights) {
+      dom.btnScanInsights.innerHTML = `<span>⏳</span><span>Scanning...</span>`;
+      dom.btnScanInsights.disabled = true;
+    }
+    if (dom.insightsLoadingState) dom.insightsLoadingState.style.display = "flex";
+    if (dom.insightsEmptyState) dom.insightsEmptyState.style.display = "none";
+    if (dom.insightsErrorState) dom.insightsErrorState.style.display = "none";
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/analytics/insights/generate?refresh_warehouse=true`, {
+        method: "POST",
+        headers: { "Accept": "application/json" },
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Scan returned HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      state.insightsList = Array.isArray(data.insights) ? data.insights : [];
+      renderInsightsList();
+      updateInsightCounts();
+      showToast("Generated fresh AI business insights from warehouse scan");
+    } catch (err) {
+      console.warn("Failed to execute insight scan:", err);
+      showToast(`Scan Error: ${err.message}`, false);
+      if (dom.insightsErrorState) {
+        dom.insightsErrorState.style.display = "flex";
+        if (dom.insightsErrorMessage) {
+          dom.insightsErrorMessage.textContent = `Anomaly scan failed: ${err.message}`;
+        }
+      }
+    } finally {
+      state.insightsLoading = false;
+      if (dom.insightsLoadingState) dom.insightsLoadingState.style.display = "none";
+      if (dom.btnScanInsights) {
+        dom.btnScanInsights.innerHTML = `<span class="icon-scan">⚡</span><span>Scan Insights</span>`;
+        dom.btnScanInsights.disabled = false;
+      }
+    }
+  }
+
+  async function updateInsightStatus(insightId, newStatus) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/analytics/insights/${insightId}/status`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Failed to update insight status (HTTP ${res.status})`);
+      }
+
+      // Optimistically update local array
+      const target = state.insightsList.find((i) => i.insight_id === insightId);
+      if (target) {
+        target.status = newStatus;
+      }
+
+      renderInsightsList();
+      updateInsightCounts();
+      showToast(`Insight marked as ${newStatus}`);
+    } catch (err) {
+      console.warn("Failed to update status:", err);
+      showToast(`Action failed: ${err.message}`, false);
+    }
+  }
+
+  function updateInsightCounts() {
+    const list = state.insightsList.filter((i) => i.status !== "dismissed");
+    const criticalCount = list.filter((i) => i.severity === "critical").length;
+    const warningCount = list.filter((i) => i.severity === "warning").length;
+    const oppCount = list.filter((i) => i.severity === "opportunity").length;
+
+    if (dom.countAllInsights) dom.countAllInsights.textContent = list.length;
+    if (dom.countCriticalInsights) dom.countCriticalInsights.textContent = criticalCount;
+    if (dom.countWarningInsights) dom.countWarningInsights.textContent = warningCount;
+    if (dom.countOpportunityInsights) dom.countOpportunityInsights.textContent = oppCount;
+  }
+
+  function renderInsightsList() {
+    if (!dom.insightsCardsList) return;
+    dom.insightsCardsList.innerHTML = "";
+
+    const filterSev = state.insightsFilterSeverity;
+    const visibleInsights = state.insightsList.filter((item) => {
+      if (item.status === "dismissed") return false;
+      if (filterSev === "all") return true;
+      return item.severity === filterSev;
+    });
+
+    if (visibleInsights.length === 0) {
+      if (dom.insightsEmptyState) dom.insightsEmptyState.style.display = "flex";
+      return;
+    }
+
+    if (dom.insightsEmptyState) dom.insightsEmptyState.style.display = "none";
+
+    visibleInsights.forEach((item) => {
+      const card = document.createElement("div");
+      card.className = `insight-card severity-${item.severity} status-${item.status}`;
+      card.id = `card_${item.insight_id}`;
+
+      const confidencePct = Math.round((Number(item.confidence_score) || 0.9) * 100);
+      const categoryLabel = String(item.category || "").replace(/_/g, " ").toUpperCase();
+      const isAcknowledged = item.status === "acknowledged";
+
+      card.innerHTML = `
+        <div class="insight-card-topbar">
+          <div class="insight-badge-row">
+            <span class="severity-badge ${item.severity}">${item.severity}</span>
+            <span class="category-tag">${categoryLabel}</span>
+            <span class="detection-method-tag">${item.detection_method}</span>
+          </div>
+          <div class="insight-topbar-meta">
+            ${isAcknowledged ? '<span style="color: var(--text-muted); font-size: 10px; font-weight: 700; text-transform: uppercase;">✓ Acknowledged</span>' : ""}
+            <span class="confidence-badge">${confidencePct}% Confidence</span>
+            <span class="insight-time">${item.period_end}</span>
+          </div>
+        </div>
+
+        <h4 class="insight-headline">${item.headline}</h4>
+
+        <div class="insight-body-grid">
+          <!-- Tier 1: Verified Fact -->
+          <div class="fact-block">
+            <div class="block-label">
+              <span class="fact-icon">◈</span> VERIFIED WAREHOUSE FACT
+            </div>
+            <p class="fact-text">${item.observed_fact}</p>
+            <div class="fact-meta-chips">
+              <span>Source: <code>${item.warehouse_table}</code></span>
+              <span>Observed: <strong>${item.observed_value_formatted}</strong></span>
+              ${item.baseline_value_formatted ? `<span>Baseline: <strong>${item.baseline_value_formatted}</strong></span>` : ""}
+            </div>
+          </div>
+
+          <!-- Tier 2: AI Strategic Explanation & Recommendation -->
+          <div class="ai-block">
+            <div class="block-label">
+              <span class="ai-icon">✳</span> AI STRATEGIC EXPLANATION
+            </div>
+            <p class="ai-text">${item.ai_explanation}</p>
+
+            <div class="rec-subblock">
+              <div class="rec-label">
+                <span class="rec-icon">➜</span> ACTIONABLE RECOMMENDATION
+              </div>
+              <p class="rec-text">${item.actionable_recommendation}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Evidence & Action Bar -->
+        <div class="insight-actions-row">
+          <details class="evidence-accordion">
+            <summary class="btn-evidence-toggle"><span>📋</span> View Supporting SQL Evidence</summary>
+            <div class="evidence-content">
+              <pre class="sql-code-block">${item.supporting_sql}</pre>
+            </div>
+          </details>
+
+          <div class="card-btn-group">
+            <button type="button" class="btn-card-action ask-assistant" data-question="Investigate this business anomaly: ${item.headline}. Relevant metrics: ${item.metric_name} was ${item.observed_value_formatted} from table ${item.warehouse_table}. What underlying data patterns explain this?">
+              <span>✳</span> Ask Assistant
+            </button>
+            ${!isAcknowledged ? `<button type="button" class="btn-card-action btn-ack" data-id="${item.insight_id}">Acknowledge</button>` : ""}
+            <button type="button" class="btn-card-action dismiss btn-dismiss" data-id="${item.insight_id}">Dismiss</button>
+          </div>
+        </div>
+      `;
+
+      // Wire Card Actions
+      const askBtn = card.querySelector(".ask-assistant");
+      if (askBtn) {
+        askBtn.addEventListener("click", () => {
+          const q = askBtn.dataset.question;
+          switchView("assistant");
+          if (dom.queryInput) {
+            dom.queryInput.value = q;
+            autosizeTextarea();
+            dom.queryInput.focus();
+          }
+          executeAskQuery(q, true);
+        });
+      }
+
+      const ackBtn = card.querySelector(".btn-ack");
+      if (ackBtn) {
+        ackBtn.addEventListener("click", () => {
+          updateInsightStatus(item.insight_id, "acknowledged");
+        });
+      }
+
+      const dismissBtn = card.querySelector(".btn-dismiss");
+      if (dismissBtn) {
+        dismissBtn.addEventListener("click", () => {
+          updateInsightStatus(item.insight_id, "dismissed");
+        });
+      }
+
+      dom.insightsCardsList.appendChild(card);
+    });
+  }
+
+
+  // ===========================================================================
   // Reset Action ("New Analysis")
   // ===========================================================================
 
@@ -1331,10 +1672,15 @@
 
     // Refresh Health button
     if (dom.btnRefreshHealth) {
-      dom.btnRefreshHealth.addEventListener("click", (e) => {
+      dom.btnRefreshHealth.addEventListener("click", async (e) => {
         e.preventDefault();
-        checkBackendHealth();
         showToast("Checking backend connection...");
+        await checkBackendHealth();
+        if (state.backendOnline) {
+          showToast("Backend connected (HTTP 200)");
+        } else {
+          showToast("Backend offline — check port 8001", false);
+        }
       });
     }
 
@@ -1342,6 +1688,7 @@
     if (dom.btnSendQuery) {
       dom.btnSendQuery.addEventListener("click", (e) => {
         e.preventDefault();
+        if (state.isBusy) return;
         if (dom.queryInput) {
           executeAskQuery(dom.queryInput.value, false);
         }
@@ -1356,6 +1703,7 @@
         // Enter sends unless Shift is pressed
         if (e.key === "Enter" && !e.shiftKey) {
           e.preventDefault();
+          if (state.isBusy) return;
           executeAskQuery(dom.queryInput.value, false);
         }
       });
@@ -1494,6 +1842,33 @@
       });
     }
 
+    // Phase 8.3: Scan Insights Buttons
+    if (dom.btnScanInsights) {
+      dom.btnScanInsights.addEventListener("click", (e) => {
+        e.preventDefault();
+        scanInsights();
+      });
+    }
+
+    if (dom.btnScanInsightsEmpty) {
+      dom.btnScanInsightsEmpty.addEventListener("click", (e) => {
+        e.preventDefault();
+        scanInsights();
+      });
+    }
+
+    // Phase 8.3: Severity Filter Pills
+    dom.insightFilterPills.forEach((pill) => {
+      pill.addEventListener("click", (e) => {
+        e.preventDefault();
+        const sev = pill.dataset.severity;
+        if (!sev) return;
+        state.insightsFilterSeverity = sev;
+        dom.insightFilterPills.forEach((p) => p.classList.toggle("active", p === pill));
+        renderInsightsList();
+      });
+    });
+
     // Clear History button
     if (dom.btnClearHistory) {
       dom.btnClearHistory.addEventListener("click", (e) => {
@@ -1530,6 +1905,7 @@
 
     // Preload dashboard analytics in background
     loadDashboardAnalytics(false);
+    loadInsights();
   }
 
   // Initialize once DOM is ready

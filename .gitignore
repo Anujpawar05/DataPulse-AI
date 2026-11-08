@@ -51,3 +51,6 @@ dbt/profiles.yml
 airflow/backups/
 # Local frontend backups
 ai_agent/frontend/*.bak
+
+# DataPulse AI runtime data
+ai_agent/backend/data/*.db

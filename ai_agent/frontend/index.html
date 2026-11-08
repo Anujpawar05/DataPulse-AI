@@ -350,6 +350,71 @@
             </div>
           </div>
 
+          <!-- Executive AI Insights & Anomaly Radar (Full Width) -->
+          <div class="analytics-widget-card full-width insights-radar-card" id="insightsRadarCard">
+            <div class="widget-card-header">
+              <div class="widget-title-block">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <span class="radar-live-dot" aria-hidden="true"></span>
+                  <h3>Executive AI Insights & Anomaly Radar</h3>
+                </div>
+                <p>Grounded statistical anomaly detection & verified AI executive recommendations</p>
+              </div>
+
+              <div class="insights-top-actions">
+                <div class="insights-filter-pills" role="group" aria-label="Filter Insights by Severity">
+                  <button type="button" class="insight-filter-pill active" data-severity="all">
+                    All <span class="pill-count" id="countAllInsights">0</span>
+                  </button>
+                  <button type="button" class="insight-filter-pill" data-severity="critical">
+                    Critical <span class="pill-count urgent" id="countCriticalInsights">0</span>
+                  </button>
+                  <button type="button" class="insight-filter-pill" data-severity="warning">
+                    Warnings <span class="pill-count warning" id="countWarningInsights">0</span>
+                  </button>
+                  <button type="button" class="insight-filter-pill" data-severity="opportunity">
+                    Opportunities <span class="pill-count opportunity" id="countOpportunityInsights">0</span>
+                  </button>
+                </div>
+
+                <button type="button" id="btnScanInsights" class="btn-scan-insights" title="Trigger on-demand statistical anomaly scan">
+                  <span class="icon-scan">⚡</span>
+                  <span>Scan Insights</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Insights Deck Viewport -->
+            <div class="insights-deck-viewport" id="insightsDeckViewport">
+              <!-- Loading State -->
+              <div class="insights-loading-state" id="insightsLoadingState" style="display: none;">
+                <div class="loading-spinner-ring"></div>
+                <span>Executing statistical anomaly detection & grounded AI synthesis...</span>
+              </div>
+
+              <!-- Empty State -->
+              <div class="insights-empty-state" id="insightsEmptyState" style="display: none;">
+                <div class="empty-radar-icon">◎</div>
+                <h4>No Active Anomalies Detected</h4>
+                <p>All core warehouse metrics, margins, and inventory positions are operating within normal statistical bands.</p>
+                <button type="button" class="btn-scan-insights" style="margin-top: 12px;" id="btnScanInsightsEmpty">
+                  <span>↻ Run Anomaly Scan</span>
+                </button>
+              </div>
+
+              <!-- Error State -->
+              <div class="insights-error-state" id="insightsErrorState" style="display: none;">
+                <span class="error-radar-icon">⚠</span>
+                <span id="insightsErrorMessage">Unable to load AI insights.</span>
+              </div>
+
+              <!-- Active Insights List -->
+              <div class="insights-cards-list" id="insightsCardsList">
+                <!-- Dynamically populated by renderInsightsList() -->
+              </div>
+            </div>
+          </div>
+
           <!-- Revenue & Profit Trends Chart (Full Width) -->
           <div class="analytics-widget-card full-width">
             <div class="widget-card-header">
