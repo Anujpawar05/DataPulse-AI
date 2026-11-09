@@ -1,0 +1,64 @@
+# ==============================================================================
+# DataPulse AI — Multi-Container Orchestration (docker-compose.yml)
+# ==============================================================================
+
+services:
+  backend:
+    image: datapulse-backend:step2
+    container_name: datapulse-backend
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8001:8001"
+    env_file:
+      - .env
+    environment:
+      - PORT=8001
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/application_default_credentials.json
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - datapulse_insights_data:/app/ai_agent/backend/data
+      - type: bind
+        source: ${GOOGLE_APPLICATION_CREDENTIALS:-${APPDATA}/gcloud/application_default_credentials.json}
+        target: /app/credentials/application_default_credentials.json
+        read_only: true
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://127.0.0.1:8001/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      datapulse_network:
+        aliases:
+          - backend
+
+  frontend:
+    image: datapulse-frontend:step3
+    container_name: datapulse-frontend
+    restart: unless-stopped
+    ports:
+      - "${DATAPULSE_FRONTEND_PORT:-8082}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - datapulse_network
+
+networks:
+  datapulse_network:
+    name: datapulse_network
+    driver: bridge
+
+volumes:
+  datapulse_insights_data:
+    name: datapulse_insights_data

@@ -1,0 +1,95 @@
+# ==============================================================================
+# DataPulse AI — Docker Build Context Ignore (.dockerignore)
+# ==============================================================================
+
+# 1. Version Control & Git
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# 2. Environment Files & Secrets (Preserve .env.example)
+.env
+.env.*
+!.env.example
+**/airflow/.env
+credentials/
+secrets/
+*.pem
+*.key
+
+# 3. Google Cloud Credentials & Service Account JSON Keys
+application_default_credentials.json
+*credential*.json
+*service_account*.json
+*service-account*.json
+gcp-key*.json
+
+# 4. Python Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+.env_*/
+
+# 5. Python Bytecode, Caches & Testing Artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# 6. Local Databases & Runtime Storage
+*.db
+*.sqlite
+*.sqlite3
+ai_agent/backend/data/*.db
+ai_agent/backend/data/*.db-wal
+ai_agent/backend/data/*.db-shm
+
+# 7. IDE, Editor & OS Artifacts
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*.swo
+*~
+
+# 8. Logs & Temporary Files
+*.log
+logs/
+airflow/logs/
+dbt/logs/
+tmp/
+temp/
+
+# 9. Node / Frontend Tooling & Backup Files
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+dist/
+build/
+*.bak
+ai_agent/frontend/*.bak
+
+# 10. Data Pipelines, Local Extracts & Artifacts
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+dbt/target/
+dbt/dbt_packages/
+airflow/backups/
+*.pbix
