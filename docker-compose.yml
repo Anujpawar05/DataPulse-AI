@@ -51,7 +51,7 @@ services:
         max-size: "5m"
         max-file: "3"
     ports:
-      - "${DATAPULSE_FRONTEND_PORT:-8082}:80"
+      - "127.0.0.1:${DATAPULSE_FRONTEND_PORT:-8082}:80"
     depends_on:
       backend:
         condition: service_healthy
