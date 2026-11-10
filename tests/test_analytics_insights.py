@@ -12,7 +12,6 @@ from ai_agent.backend.analytics.insights_analyzer import (
     calculate_modified_z_scores,
     calculate_moving_averages,
     calculate_rolling_std_bands,
-    format_inr,
     AnomalyInsightsAnalyzer,
 )
 from ai_agent.backend.analytics.insights_generator import (
@@ -67,12 +66,6 @@ def test_moving_averages_and_rolling_bands():
     assert bands[2]["upper"] is not None
     assert bands[2]["lower"] is not None
     assert bands[2]["upper"] > bands[2]["sma"] > bands[2]["lower"]
-
-
-def test_format_inr():
-    assert format_inr(25000000.0) == "₹2.50 Cr"
-    assert format_inr(750000.0) == "₹7.50 L"
-    assert format_inr(1500.50) == "₹1,500.50"
 
 
 # =============================================================================

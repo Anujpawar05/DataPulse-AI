@@ -7,6 +7,11 @@ services:
     image: datapulse-backend:step2
     container_name: datapulse-backend
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       - "127.0.0.1:8001:8001"
     env_file:
@@ -40,6 +45,11 @@ services:
     image: datapulse-frontend:step3
     container_name: datapulse-frontend
     restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
     ports:
       - "${DATAPULSE_FRONTEND_PORT:-8082}:80"
     depends_on:

@@ -1,5 +1,3 @@
-{{ config(materialized='view') }}
-
 SELECT
     sale_id,
     order_id,

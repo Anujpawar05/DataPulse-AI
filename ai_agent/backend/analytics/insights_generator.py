@@ -4,6 +4,9 @@ from typing import List, Dict, Any, Optional
 
 from ai_agent.backend.providers.manager import ProviderManager
 from ai_agent.backend.analytics.insights_store import InsightsStore
+from ai_agent.backend.logger import get_logger, get_request_id
+
+logger = get_logger("analytics")
 
 
 def clean_llm_json_response(raw_text: str) -> str:
@@ -163,6 +166,16 @@ class GroundedInsightsGenerator:
                     provider_used = "llm_grounded"
             except Exception as exc:
                 # Expected when offline or quota reached; graceful fallback
+                exc_class = type(exc).__name__
+                facts_count = len(facts)
+                logger.warning(
+                    f"[{get_request_id()}] LLM narrative generation failed ({exc_class}); activating deterministic rule fallback for {facts_count} facts",
+                    extra={
+                        "event": "rule_fallback_activated",
+                        "reason_class": exc_class,
+                        "facts_count": facts_count,
+                    },
+                )
                 provider_used = "rule_fallback"
 
         persisted_insights = []

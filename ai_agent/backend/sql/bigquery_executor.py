@@ -1,4 +1,7 @@
 
+import time
+from typing import Any, Optional
+
 from google.cloud import bigquery
 from google.api_core.exceptions import (
     BadRequest,
@@ -17,9 +20,34 @@ from ai_agent.backend.sql.validator import (
     validate_sql,
     SQLValidationError,
 )
+from ai_agent.backend.logger import get_logger, get_request_id
+
+logger = get_logger("bigquery")
 
 
 MAX_RESULT_ROWS = 1000
+
+
+def _extract_job_id(job: Any) -> str:
+    """Safely extract the BigQuery job ID string, handling mocks and None."""
+    if job is None:
+        return "unsubmitted"
+    raw_id = getattr(job, "job_id", None)
+    if isinstance(raw_id, str) and raw_id:
+        return raw_id
+    if raw_id is not None and not type(raw_id).__name__.startswith("MagicMock"):
+        return str(raw_id)
+    return "unknown"
+
+
+def _extract_int_metric(job: Any, attr_name: str) -> Optional[int]:
+    """Safely extract integer metric from job, ignoring MagicMocks or None."""
+    if job is None:
+        return None
+    val = getattr(job, attr_name, None)
+    if isinstance(val, int) and not isinstance(val, bool):
+        return val
+    return None
 
 
 class BigQueryExecutionError(RuntimeError):
@@ -48,6 +76,12 @@ class BigQueryExecutor:
         )
 
         job = None
+        start_time = time.perf_counter()
+
+        logger.debug(
+            f"[{get_request_id()}] BigQuery query submitted (location={BIGQUERY_LOCATION})",
+            extra={"event": "bigquery_query_submitted", "location": BIGQUERY_LOCATION},
+        )
 
         try:
             # 3. Submit the query.
@@ -64,9 +98,42 @@ class BigQueryExecutor:
             )
 
             # 5. Convert BigQuery rows into dictionaries.
-            return [dict(row.items()) for row in rows]
+            result_dicts = [dict(row.items()) for row in rows]
+            duration_ms = (time.perf_counter() - start_time) * 1000
+
+            job_id = _extract_job_id(job)
+            bytes_billed = _extract_int_metric(job, "total_bytes_billed")
+            bytes_processed = _extract_int_metric(job, "total_bytes_processed")
+            slot_ms = _extract_int_metric(job, "slot_millis")
+            row_count = len(result_dicts)
+
+            logger.info(
+                f"[{get_request_id()}] BigQuery query completed - job_id={job_id}, rows={row_count}, "
+                f"bytes_billed={bytes_billed}, bytes_processed={bytes_processed}, slot_ms={slot_ms} ({duration_ms:.1f}ms)",
+                extra={
+                    "event": "bigquery_query_success",
+                    "job_id": job_id,
+                    "rows_returned": row_count,
+                    "bytes_billed": bytes_billed,
+                    "bytes_processed": bytes_processed,
+                    "slot_ms": slot_ms,
+                    "duration_ms": duration_ms,
+                },
+            )
+            return result_dicts
 
         except TimeoutError as exc:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            job_id = _extract_job_id(job)
+            logger.error(
+                f"[{get_request_id()}] BigQuery query failed - job_id={job_id}, error=TimeoutError ({duration_ms:.1f}ms)",
+                extra={
+                    "event": "bigquery_query_failed",
+                    "job_id": job_id,
+                    "error_class": "TimeoutError",
+                    "duration_ms": duration_ms,
+                },
+            )
             if job is not None:
                 try:
                     job.cancel()
@@ -78,16 +145,49 @@ class BigQueryExecutor:
             ) from exc
 
         except BadRequest as exc:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            job_id = _extract_job_id(job)
+            logger.error(
+                f"[{get_request_id()}] BigQuery query failed - job_id={job_id}, error=BadRequest ({duration_ms:.1f}ms)",
+                extra={
+                    "event": "bigquery_query_failed",
+                    "job_id": job_id,
+                    "error_class": "BadRequest",
+                    "duration_ms": duration_ms,
+                },
+            )
             raise BigQueryExecutionError(
                 "BigQuery rejected the SQL query or its execution settings."
             ) from exc
 
         except Forbidden as exc:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            job_id = _extract_job_id(job)
+            logger.error(
+                f"[{get_request_id()}] BigQuery query failed - job_id={job_id}, error=Forbidden ({duration_ms:.1f}ms)",
+                extra={
+                    "event": "bigquery_query_failed",
+                    "job_id": job_id,
+                    "error_class": "Forbidden",
+                    "duration_ms": duration_ms,
+                },
+            )
             raise BigQueryExecutionError(
                 "BigQuery access was denied. Check the account's permissions."
             ) from exc
 
         except GoogleAPICallError as exc:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            job_id = _extract_job_id(job)
+            logger.error(
+                f"[{get_request_id()}] BigQuery query failed - job_id={job_id}, error=GoogleAPICallError ({duration_ms:.1f}ms)",
+                extra={
+                    "event": "bigquery_query_failed",
+                    "job_id": job_id,
+                    "error_class": "GoogleAPICallError",
+                    "duration_ms": duration_ms,
+                },
+            )
             raise BigQueryExecutionError(
                 "BigQuery is temporarily unavailable."
             ) from exc

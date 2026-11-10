@@ -1,5 +1,3 @@
-{{ config(materialized='view') }}
-
 SELECT
     product_category,
     total_orders,

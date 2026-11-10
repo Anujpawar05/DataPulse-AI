@@ -1,5 +1,3 @@
-{{ config(materialized='view') }}
-
 SELECT
     product_id,
     TRIM(product_name) AS product_name,

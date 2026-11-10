@@ -55,3 +55,8 @@ BIGQUERY_QUERY_TIMEOUT_SECONDS = int(
 BIGQUERY_MAX_BYTES_BILLED = int(
     os.getenv("BIGQUERY_MAX_BYTES_BILLED", "1000000000")
 )
+
+# Logging configuration
+VALID_LOG_LEVELS = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+raw_log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+LOG_LEVEL = raw_log_level if raw_log_level in VALID_LOG_LEVELS else "INFO"

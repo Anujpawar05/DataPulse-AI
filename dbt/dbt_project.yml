@@ -18,4 +18,10 @@ clean-targets:
 
 models:
   datapulse:
-    +materialized: view
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: view
+    marts:
+      +materialized: table
+      +schema: datapulse_marts
